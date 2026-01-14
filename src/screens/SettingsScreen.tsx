@@ -8,18 +8,15 @@ import {
   DialogActions,
   DialogContent,
   DialogTitle,
-  Divider,
   Snackbar,
   Stack,
   Switch,
   Typography,
-  useMediaQuery,
 } from '@mui/material';
 import FileDownloadRoundedIcon from '@mui/icons-material/FileDownloadRounded';
 import FileUploadRoundedIcon from '@mui/icons-material/FileUploadRounded';
 import DeleteForeverRoundedIcon from '@mui/icons-material/DeleteForeverRounded';
 import { useRef, useState } from 'react';
-import { useTheme } from '@mui/material/styles';
 import type { ExportDumpV1 } from '../domain/types';
 import { exportData, importData, wipeAll } from '../storage';
 import { usePrivacySettings } from '../app/usePrivacySettings';
@@ -27,8 +24,6 @@ import { usePrivacySettings } from '../app/usePrivacySettings';
 const SettingsScreen = () => {
   const { hidePhotos, hideScores, setHidePhotos, setHideScores } =
     usePrivacySettings();
-  const theme = useTheme();
-  const isDesktop = useMediaQuery(theme.breakpoints.up('md'));
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const [importDump, setImportDump] = useState<ExportDumpV1 | null>(null);
   const [importDialogOpen, setImportDialogOpen] = useState(false);
@@ -100,10 +95,7 @@ const SettingsScreen = () => {
   };
 
   return (
-    <Container
-      maxWidth={isDesktop ? 'md' : 'sm'}
-      sx={{ px: { xs: 2, sm: 3, md: 4 }, py: { xs: 3, md: 4 } }}
-    >
+    <Container maxWidth="md" sx={{ px: { xs: 2, sm: 3, md: 4 }, py: 4 }}>
       <Stack spacing={3}>
         <Box sx={{ textAlign: { xs: 'left', md: 'center' } }}>
           <Typography variant="h5" fontWeight={700}>
@@ -124,16 +116,22 @@ const SettingsScreen = () => {
             },
           }}
         >
-          <Card sx={{ borderRadius: 4 }}>
+          <Card variant="outlined" sx={{ borderRadius: '24px' }}>
             <CardContent>
               <Stack spacing={2}>
-                <Typography variant="subtitle1" fontWeight={700}>
-                  Паник-режим
-                </Typography>
+                <Box>
+                  <Typography variant="subtitle1" fontWeight={700}>
+                    Паник-режим
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary">
+                    Скрывайте чувствительные данные в интерфейсе.
+                  </Typography>
+                </Box>
                 <Stack
                   direction="row"
                   alignItems="center"
                   justifyContent="space-between"
+                  spacing={2}
                 >
                   <Box>
                     <Typography fontWeight={600}>Скрывать фото</Typography>
@@ -146,11 +144,11 @@ const SettingsScreen = () => {
                     onChange={(event) => setHidePhotos(event.target.checked)}
                   />
                 </Stack>
-                <Divider />
                 <Stack
                   direction="row"
                   alignItems="center"
                   justifyContent="space-between"
+                  spacing={2}
                 >
                   <Box>
                     <Typography fontWeight={600}>Скрывать оценки</Typography>
@@ -167,17 +165,22 @@ const SettingsScreen = () => {
             </CardContent>
           </Card>
 
-          <Card sx={{ borderRadius: 4 }}>
+          <Card variant="outlined" sx={{ borderRadius: '24px' }}>
             <CardContent>
               <Stack spacing={2}>
-                <Typography variant="subtitle1" fontWeight={700}>
-                  Экспорт и импорт
-                </Typography>
+                <Box>
+                  <Typography variant="subtitle1" fontWeight={700}>
+                    Экспорт и импорт
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary">
+                    Сохраняйте резервную копию или переносите данные.
+                  </Typography>
+                </Box>
                 <Button
                   variant="contained"
                   startIcon={<FileDownloadRoundedIcon />}
                   onClick={handleExport}
-                  sx={{ borderRadius: 999, textTransform: 'none' }}
+                  fullWidth
                 >
                   Экспортировать данные
                 </Button>
@@ -197,11 +200,10 @@ const SettingsScreen = () => {
                   }}
                 />
                 <Button
-                  variant="contained"
-                  color="secondary"
+                  variant="outlined"
                   startIcon={<FileUploadRoundedIcon />}
                   onClick={() => fileInputRef.current?.click()}
-                  sx={{ borderRadius: 999, textTransform: 'none' }}
+                  fullWidth
                 >
                   Импортировать файл
                 </Button>
@@ -211,7 +213,7 @@ const SettingsScreen = () => {
 
           <Card
             sx={{
-              borderRadius: 4,
+              borderRadius: '24px',
               borderColor: 'error.light',
               gridColumn: { md: '1 / -1' },
             }}
@@ -219,18 +221,20 @@ const SettingsScreen = () => {
           >
             <CardContent>
               <Stack spacing={2}>
-                <Typography variant="subtitle1" fontWeight={700} color="error">
-                  Danger zone
-                </Typography>
-                <Typography variant="body2" color="text.secondary">
-                  Удалит все анкеты, события и фото на этом устройстве.
-                </Typography>
+                <Box>
+                  <Typography variant="subtitle1" fontWeight={700} color="error">
+                    Danger zone
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary">
+                    Удалит все анкеты, события и фото на этом устройстве.
+                  </Typography>
+                </Box>
                 <Button
                   color="error"
                   variant="contained"
                   startIcon={<DeleteForeverRoundedIcon />}
                   onClick={() => setWipeDialogOpen(true)}
-                  sx={{ borderRadius: 999, textTransform: 'none' }}
+                  sx={{ width: { xs: '100%', md: 'auto' } }}
                 >
                   Удалить все данные
                 </Button>
