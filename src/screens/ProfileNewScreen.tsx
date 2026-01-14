@@ -8,21 +8,31 @@ import {
 } from '@mui/material';
 import { useNavigate } from 'react-router-dom';
 import { useState } from 'react';
+import type { ProfileStatus } from '../domain/types';
+import { createProfile } from '../storage';
 
-const statusOptions = [
-  'Ищу серьёзные отношения',
-  'Открыт для общения',
-  'Свайп без спешки',
+const statusOptions: ProfileStatus[] = [
+  'Новая',
+  'Общаемся',
+  '1 свидание',
+  'Регулярно',
+  'Остыли',
+  'Закрыто',
 ];
 
 const ProfileNewScreen = () => {
   const navigate = useNavigate();
   const [name, setName] = useState('');
-  const [status, setStatus] = useState(statusOptions[0]);
+  const [status, setStatus] = useState<ProfileStatus>(statusOptions[0]);
 
-  const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    navigate(-1);
+    const profile = await createProfile({
+      name,
+      status,
+      contacts: {},
+    });
+    navigate(`/p/${profile.id}`);
   };
 
   return (
@@ -39,7 +49,7 @@ const ProfileNewScreen = () => {
           label="Статус"
           select
           value={status}
-          onChange={(event) => setStatus(event.target.value)}
+          onChange={(event) => setStatus(event.target.value as ProfileStatus)}
           fullWidth
         >
           {statusOptions.map((option) => (
