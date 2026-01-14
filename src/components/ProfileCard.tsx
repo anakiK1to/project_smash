@@ -14,6 +14,7 @@ import InstagramIcon from '@mui/icons-material/Instagram';
 import ChatBubbleOutlineIcon from '@mui/icons-material/ChatBubbleOutline';
 import CallIcon from '@mui/icons-material/Call';
 import EventIcon from '@mui/icons-material/Event';
+import { alpha, useTheme } from '@mui/material/styles';
 import type { Profile, ProfileStatus } from '../domain/types';
 import { addEvent, getPhoto, nowIso } from '../storage';
 import { daysSince, formatRelative } from '../utils/time';
@@ -35,6 +36,7 @@ type ProfileCardProps = {
   onEventAdded?: () => void;
   dense?: boolean;
   layout?: 'list' | 'grid';
+  selected?: boolean;
 };
 
 const ProfileCard = ({
@@ -43,7 +45,9 @@ const ProfileCard = ({
   onEventAdded,
   dense = false,
   layout = 'list',
+  selected = false,
 }: ProfileCardProps) => {
+  const theme = useTheme();
   const [photoUrl, setPhotoUrl] = useState<string | undefined>();
   const [snackbarMessage, setSnackbarMessage] = useState<string | null>(null);
   const { hidePhotos, hideScores } = usePrivacySettings();
@@ -129,7 +133,12 @@ const ProfileCard = ({
       sx={{
         borderRadius: 3,
         border: '1px solid',
-        borderColor: 'divider',
+        borderColor: selected
+          ? alpha(theme.palette.primary.main, 0.35)
+          : 'divider',
+        bgcolor: selected
+          ? alpha(theme.palette.primary.main, 0.08)
+          : theme.palette.background.paper,
         boxShadow: '0px 10px 24px rgba(15, 23, 42, 0.08)',
         overflow: 'hidden',
       }}
