@@ -12,6 +12,7 @@ import {
 } from '@mui/material';
 import HomeRoundedIcon from '@mui/icons-material/HomeRounded';
 import SettingsRoundedIcon from '@mui/icons-material/SettingsRounded';
+import CalendarMonthIcon from '@mui/icons-material/CalendarMonth';
 import { Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { useTheme } from '@mui/material/styles';
 
@@ -23,6 +24,8 @@ const AppShell = () => {
   const railWidth = 96;
   const currentValue = location.pathname.startsWith('/settings')
     ? '/settings'
+    : location.pathname.startsWith('/calendar')
+      ? '/calendar'
     : '/';
 
   return (
@@ -65,6 +68,23 @@ const AppShell = () => {
               </ListItemIcon>
               <ListItemText
                 primary="Анкеты"
+                primaryTypographyProps={{ variant: 'caption', textAlign: 'center' }}
+              />
+            </ListItemButton>
+            <ListItemButton
+              selected={currentValue === '/calendar'}
+              onClick={() => navigate('/calendar')}
+              sx={{
+                flexDirection: 'column',
+                gap: 0.5,
+                py: 1.5,
+              }}
+            >
+              <ListItemIcon sx={{ minWidth: 0 }}>
+                <CalendarMonthIcon />
+              </ListItemIcon>
+              <ListItemText
+                primary="Календарь"
                 primaryTypographyProps={{ variant: 'caption', textAlign: 'center' }}
               />
             </ListItemButton>
@@ -120,6 +140,11 @@ const AppShell = () => {
               label="Анкеты"
               value="/"
               icon={<HomeRoundedIcon />}
+            />
+            <BottomNavigationAction
+              label="Календарь"
+              value="/calendar"
+              icon={<CalendarMonthIcon />}
             />
             <BottomNavigationAction
               label="Настройки"
