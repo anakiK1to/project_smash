@@ -28,7 +28,7 @@ const PhotoFrame = ({
   const shouldShowImage = Boolean(src) && !hide;
 
   const borderRadius =
-    variant === 'hero' ? 28 : variant === 'tile' ? 20 : 18;
+    variant === 'hero' ? 28 : variant === 'tile' ? 20 : 16;
 
   const baseStyles = {
     position: 'relative',
@@ -43,11 +43,8 @@ const PhotoFrame = ({
     variant === 'hero'
       ? {
           width: '100%',
-          maxWidth: 820,
-          aspectRatio: { xs: '16 / 9', sm: '16 / 9', md: '4 / 3' },
-          minHeight: { xs: 180, sm: 220, md: 260 },
-          maxHeight: { xs: 260, sm: 320, md: 420 },
-          mx: 'auto',
+          aspectRatio: { xs: '16 / 9', sm: '16 / 9', lg: '4 / 3' },
+          // Avoid maxHeight + aspectRatio conflicts that compress the hero into a capsule.
         }
       : variant === 'tile'
         ? {
