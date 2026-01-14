@@ -86,6 +86,11 @@ export const getProfile = async (
   return db.get('profiles', id);
 };
 
+export const getPhoto = async (id: string): Promise<Photo | undefined> => {
+  const db = await dbPromise;
+  return db.get('photos', id);
+};
+
 export const createProfile = async (
   input: Pick<
     Profile,
