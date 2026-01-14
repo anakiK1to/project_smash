@@ -9,7 +9,6 @@ import {
   Stack,
   Typography,
 } from '@mui/material';
-import PhotoIcon from '@mui/icons-material/InsertPhotoOutlined';
 import TelegramIcon from '@mui/icons-material/Telegram';
 import InstagramIcon from '@mui/icons-material/Instagram';
 import ChatBubbleOutlineIcon from '@mui/icons-material/ChatBubbleOutline';
@@ -19,6 +18,7 @@ import type { Profile, ProfileStatus } from '../domain/types';
 import { addEvent, getPhoto, nowIso } from '../storage';
 import { daysSince, formatRelative } from '../utils/time';
 import { usePrivacySettings } from '../app/usePrivacySettings';
+import PhotoFrame from './PhotoFrame';
 
 const statusTones: Record<ProfileStatus, { bg: string; fg: string }> = {
   Новая: { bg: '#E3F2FD', fg: '#0D47A1' },
@@ -143,38 +143,13 @@ const ProfileCard = ({
           spacing={2}
           alignItems={isGrid ? 'stretch' : 'center'}
         >
-          <Box
-            sx={{
-              width: isGrid ? '100%' : { xs: 96, md: dense ? 84 : 96 },
-              height: isGrid ? { xs: 160, md: 140 } : { xs: 96, md: dense ? 84 : 96 },
-              borderRadius: 2,
-              overflow: 'hidden',
-              flexShrink: 0,
-              bgcolor: 'grey.100',
-            }}
-          >
-            {photoUrl ? (
-              <Box
-                component="img"
-                src={photoUrl}
-                alt={profile.name}
-                sx={{ width: '100%', height: '100%', objectFit: 'cover' }}
-              />
-            ) : (
-              <Stack
-                alignItems="center"
-                justifyContent="center"
-                sx={{
-                  width: '100%',
-                  height: '100%',
-                  background:
-                    'linear-gradient(135deg, rgba(224,231,255,0.9), rgba(254,215,170,0.9))',
-                  color: 'text.secondary',
-                }}
-              >
-                <PhotoIcon fontSize="medium" />
-              </Stack>
-            )}
+          <Box sx={{ flexShrink: 0 }}>
+            <PhotoFrame
+              variant="avatar"
+              src={photoUrl}
+              alt={profile.name}
+              hide={hidePhotos}
+            />
           </Box>
           <Stack spacing={1} sx={{ flex: 1, minWidth: 0 }}>
             <Stack
