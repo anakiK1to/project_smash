@@ -37,9 +37,7 @@ const ProfilesSplitViewScreen = () => {
       {showListPane ? (
         <Box
           sx={{
-            width: { md: 380, lg: 420 },
-            minWidth: { md: 360 },
-            maxWidth: { md: 420 },
+            width: { md: 420, lg: 460 },
             flexShrink: 0,
             borderRight: { md: '1px solid' },
             borderColor: { md: 'divider' },
@@ -56,42 +54,33 @@ const ProfilesSplitViewScreen = () => {
       ) : null}
 
       {showDetailPane ? (
-        <Box
-          sx={{
-            flex: 1,
-            bgcolor: 'background.default',
-            px: { md: 3, lg: 4 },
-            py: { md: 3, lg: 4 },
-          }}
-        >
+        <Box sx={{ flex: 1, bgcolor: 'background.default' }}>
           {detailMatch ? (
             <Outlet />
           ) : (
-            <Box sx={{ maxWidth: 920, mx: 'auto' }}>
-              <Stack
-                spacing={2}
-                alignItems="center"
-                justifyContent="center"
-                sx={{ height: '100%', py: 6 }}
-              >
-                <Typography variant="h4">📌</Typography>
-                {profilesCount === 0 ? (
-                  <>
-                    <Typography variant="h6">Пока нет анкет</Typography>
-                    <Typography color="text.secondary">
-                      Создайте первую анкету, чтобы увидеть детали.
-                    </Typography>
-                  </>
-                ) : (
-                  <>
-                    <Typography variant="h6">Выберите анкету</Typography>
-                    <Typography color="text.secondary">
-                      Детали выбранного профиля появятся здесь.
-                    </Typography>
-                  </>
-                )}
-              </Stack>
-            </Box>
+            <Stack
+              spacing={2}
+              alignItems="center"
+              justifyContent="center"
+              sx={{ height: '100%', py: 6 }}
+            >
+              <Typography variant="h4">📌</Typography>
+              {profilesCount === 0 ? (
+                <>
+                  <Typography variant="h6">Пока нет анкет</Typography>
+                  <Typography color="text.secondary">
+                    Создайте первую анкету, чтобы увидеть детали.
+                  </Typography>
+                </>
+              ) : (
+                <>
+                  <Typography variant="h6">Выберите анкету</Typography>
+                  <Typography color="text.secondary">
+                    Детали выбранного профиля появятся здесь.
+                  </Typography>
+                </>
+              )}
+            </Stack>
           )}
         </Box>
       ) : null}
