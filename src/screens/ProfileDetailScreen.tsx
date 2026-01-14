@@ -6,7 +6,6 @@ import {
   Card,
   CardContent,
   Chip,
-  Container,
   Dialog,
   DialogActions,
   DialogContent,
@@ -44,6 +43,8 @@ import AddIcon from '@mui/icons-material/Add';
 import EditOutlinedIcon from '@mui/icons-material/EditOutlined';
 import CloseIcon from '@mui/icons-material/Close';
 import PhotoLibraryIcon from '@mui/icons-material/PhotoLibrary';
+import TelegramIcon from '@mui/icons-material/Telegram';
+import InstagramIcon from '@mui/icons-material/Instagram';
 import {
   useCallback,
   useEffect,
@@ -78,6 +79,7 @@ import {
   fromDatetimeLocalValue,
   toDatetimeLocalValue,
 } from '../utils/date';
+import { formatRelative } from '../utils/time';
 import { usePrivacySettings } from '../app/usePrivacySettings';
 import PhotoFrame from '../components/PhotoFrame';
 
@@ -127,6 +129,41 @@ const TabPanel = ({
   >
     {value === index ? children : null}
   </Box>
+);
+
+const EmptyStateCard = ({
+  icon,
+  title,
+  description,
+  actionLabel,
+  onAction,
+  isDesktop,
+}: {
+  icon: string;
+  title: string;
+  description: string;
+  actionLabel: string;
+  onAction: () => void;
+  isDesktop: boolean;
+}) => (
+  <Card variant="outlined" sx={{ borderRadius: 24 }}>
+    <CardContent>
+      <Stack spacing={2} alignItems="center" textAlign="center">
+        <Typography variant="h3">{icon}</Typography>
+        <Stack spacing={0.5}>
+          <Typography variant="h6">{title}</Typography>
+          <Typography color="text.secondary">{description}</Typography>
+        </Stack>
+        <Button
+          variant="contained"
+          onClick={onAction}
+          fullWidth={!isDesktop}
+        >
+          {actionLabel}
+        </Button>
+      </Stack>
+    </CardContent>
+  </Card>
 );
 
 const ProfileDetailScreen = () => {
@@ -281,16 +318,25 @@ const ProfileDetailScreen = () => {
 
   const statusTone = profile ? statusTones[profile.status] : null;
 
-  const ratingLabel = useMemo(() => {
+  const ratingChips = useMemo(() => {
     if (!profile || hideScores) {
+      return { peach: 0, vibe: 0 };
+    }
+    return {
+      peach: Math.max(0, Math.round(profile.attractiveness ?? 0)),
+      vibe: Math.max(0, Math.round(profile.vibe ?? 0)),
+    };
+  }, [profile, hideScores]);
+
+  const metaLabel = useMemo(() => {
+    if (!profile) {
       return '';
     }
-    const peachCount = Math.max(0, Math.round(profile.attractiveness ?? 0));
-    const vibeCount = Math.max(0, Math.round(profile.vibe ?? 0));
-    const peachLabel = peachCount ? '🍑'.repeat(peachCount) : '';
-    const vibeLabel = vibeCount ? '✨'.repeat(vibeCount) : '';
-    return [peachLabel, vibeLabel].filter(Boolean).join(' ');
-  }, [profile, hideScores]);
+    if (profile.lastInteractionAt) {
+      return `последний контакт: ${formatRelative(profile.lastInteractionAt)}`;
+    }
+    return `обновлено: ${formatRelative(profile.updatedAt)}`;
+  }, [profile]);
 
   const groupedEvents = useMemo(() => {
     const groups: Array<{ header: string; items: TimelineEvent[] }> = [];
@@ -423,6 +469,14 @@ const ProfileDetailScreen = () => {
   const galleryEmptyLabel = hidePhotos
     ? 'Фото скрыты паник-режимом.'
     : 'Здесь будут фото. Добавьте первые снимки.';
+  const telegramHandle = profile?.contacts.telegram?.replace(/^@/, '') ?? '';
+  const instagramHandle = profile?.contacts.instagram?.replace(/^@/, '') ?? '';
+  const telegramUrl = telegramHandle
+    ? `https://t.me/${telegramHandle}`
+    : null;
+  const instagramUrl = instagramHandle
+    ? `https://instagram.com/${instagramHandle}`
+    : null;
 
   return (
     <Box sx={{ minHeight: '100vh', bgcolor: 'background.default' }}>
@@ -472,9 +526,13 @@ const ProfileDetailScreen = () => {
         </Toolbar>
       </AppBar>
 
-      <Container
-        maxWidth={isDesktop ? 'md' : 'sm'}
-        sx={{ px: { xs: 2, sm: 3, md: 4 }, py: { xs: 3, md: 4 } }}
+      <Box
+        sx={{
+          px: { xs: 2, sm: 3, md: 4 },
+          py: { xs: 3, md: 4 },
+          maxWidth: 920,
+          mx: 'auto',
+        }}
       >
         {!loaded ? (
           <Stack spacing={2}>
@@ -501,11 +559,10 @@ const ProfileDetailScreen = () => {
           <Stack spacing={3}>
             <Box
               sx={{
-                borderRadius: 16,
+                borderRadius: 28,
                 overflow: 'hidden',
                 boxShadow: '0px 18px 40px rgba(15, 23, 42, 0.14)',
-                width: 'fit-content',
-                mx: 'auto',
+                width: '100%',
               }}
             >
               <PhotoFrame
@@ -514,44 +571,105 @@ const ProfileDetailScreen = () => {
                 alt={profile.name}
                 hide={hidePhotos}
                 overlay={
-                  <Stack
-                    direction="row"
-                    spacing={1}
-                    alignItems="center"
-                    sx={{
-                      position: 'absolute',
-                      left: 16,
-                      bottom: 16,
-                      bgcolor: 'rgba(255,255,255,0.9)',
-                      borderRadius: 999,
-                      px: 1.5,
-                      py: 0.75,
-                      boxShadow: '0px 6px 20px rgba(15, 23, 42, 0.12)',
-                    }}
-                  >
-                    {statusTone ? (
-                      <Chip
-                        label={profile.status}
-                        size="small"
-                        sx={{
-                          bgcolor: statusTone.bg,
-                          color: statusTone.fg,
-                          fontWeight: 600,
-                        }}
-                      />
-                    ) : null}
-                    {ratingLabel ? (
-                      <Typography variant="body2">{ratingLabel}</Typography>
-                    ) : null}
-                  </Stack>
+                  <>
+                    <Box
+                      sx={{
+                        position: 'absolute',
+                        inset: 0,
+                        background:
+                          'linear-gradient(180deg, rgba(0,0,0,0) 35%, rgba(0,0,0,0.45) 100%)',
+                      }}
+                    />
+                    <Stack
+                      direction="row"
+                      spacing={1}
+                      alignItems="center"
+                      flexWrap="wrap"
+                      useFlexGap
+                      sx={{
+                        position: 'absolute',
+                        left: 16,
+                        bottom: 16,
+                      }}
+                    >
+                      {statusTone ? (
+                        <Chip
+                          label={profile.status}
+                          size="small"
+                          sx={{
+                            bgcolor: statusTone.bg,
+                            color: statusTone.fg,
+                            fontWeight: 600,
+                          }}
+                        />
+                      ) : null}
+                      {!hideScores && ratingChips.peach > 0 ? (
+                        <Chip
+                          label={`🍑 ${ratingChips.peach}`}
+                          size="small"
+                          sx={{ bgcolor: 'rgba(255,255,255,0.9)' }}
+                        />
+                      ) : null}
+                      {!hideScores && ratingChips.vibe > 0 ? (
+                        <Chip
+                          label={`✨ ${ratingChips.vibe}`}
+                          size="small"
+                          sx={{ bgcolor: 'rgba(255,255,255,0.9)' }}
+                        />
+                      ) : null}
+                    </Stack>
+                  </>
                 }
               />
             </Box>
 
             <Stack
-              direction={{ xs: 'column', sm: 'row' }}
+              direction="row"
               spacing={1.5}
-              alignItems="stretch"
+              alignItems="center"
+              flexWrap="wrap"
+              useFlexGap
+            >
+              <Stack direction="row" spacing={1} alignItems="center">
+                {telegramUrl ? (
+                  <IconButton
+                    size="small"
+                    component="a"
+                    href={telegramUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                    aria-label="Telegram"
+                  >
+                    <TelegramIcon fontSize="small" />
+                  </IconButton>
+                ) : null}
+                {instagramUrl ? (
+                  <IconButton
+                    size="small"
+                    component="a"
+                    href={instagramUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                    aria-label="Instagram"
+                  >
+                    <InstagramIcon fontSize="small" />
+                  </IconButton>
+                ) : null}
+              </Stack>
+              {metaLabel ? (
+                <Typography variant="caption" color="text.secondary">
+                  {metaLabel}
+                </Typography>
+              ) : null}
+            </Stack>
+
+            <Stack
+              direction={{ xs: 'column', md: 'row' }}
+              spacing={1.5}
+              alignItems={{ md: 'center' }}
+              justifyContent={{ md: 'space-between' }}
+              flexWrap="wrap"
+              useFlexGap
             >
               <Stack
                 direction="row"
@@ -562,168 +680,43 @@ const ProfileDetailScreen = () => {
               >
                 <Button
                   variant="outlined"
+                  size="small"
                   startIcon={<ChatBubbleOutlineIcon />}
-                  sx={{ borderRadius: 999, textTransform: 'none' }}
+                  sx={{ textTransform: 'none' }}
                   onClick={() => handleQuickEvent('message')}
                 >
                   Сообщение
                 </Button>
                 <Button
                   variant="outlined"
+                  size="small"
                   startIcon={<CallIcon />}
-                  sx={{ borderRadius: 999, textTransform: 'none' }}
+                  sx={{ textTransform: 'none' }}
                   onClick={() => handleQuickEvent('call')}
                 >
                   Звонок
                 </Button>
                 <Button
                   variant="outlined"
+                  size="small"
                   startIcon={<EventIcon />}
-                  sx={{ borderRadius: 999, textTransform: 'none' }}
+                  sx={{ textTransform: 'none' }}
                   onClick={() => handleQuickEvent('date')}
                 >
                   Свидание
                 </Button>
               </Stack>
-              <Button
-                variant="contained"
-                startIcon={<AddIcon />}
-                sx={{ borderRadius: 999, textTransform: 'none' }}
-                onClick={() => {
-                  setEventAt(toDatetimeLocalValue(new Date().toISOString()));
-                  setEventDialogOpen(true);
-                }}
+              <Stack
+                direction="row"
+                spacing={1}
+                alignItems="center"
+                flexWrap="wrap"
+                useFlexGap
               >
-                Добавить событие
-              </Button>
-              <Button
-                variant="outlined"
-                startIcon={<PhotoLibraryIcon />}
-                sx={{ borderRadius: 999, textTransform: 'none' }}
-                onClick={() => fileInputRef.current?.click()}
-              >
-                Добавить фото
-              </Button>
-              <Button
-                variant="text"
-                startIcon={<EditOutlinedIcon />}
-                sx={{ borderRadius: 999, textTransform: 'none' }}
-                onClick={() => profile && navigate(`/p/${profile.id}/edit`)}
-              >
-                Редактировать
-              </Button>
-            </Stack>
-
-            <Tabs
-              value={tab}
-              onChange={(_, value) => setTab(value)}
-              variant="fullWidth"
-              sx={{
-                bgcolor: 'grey.100',
-                borderRadius: 999,
-                minHeight: 44,
-                '& .MuiTab-root': {
-                  textTransform: 'none',
-                  fontWeight: 600,
-                  minHeight: 44,
-                },
-                '& .MuiTabs-indicator': { height: 4, borderRadius: 999 },
-              }}
-            >
-              <Tab label="Таймлайн" />
-              <Tab label="Заметки" />
-              <Tab label="Галерея" />
-            </Tabs>
-
-            <TabPanel value={tab} index={0}>
-              <Stack spacing={2}>
-                {events.length === 0 ? (
-                  <Card variant="outlined" sx={{ borderRadius: 4 }}>
-                    <CardContent>
-                      <Typography color="text.secondary">
-                        Пока нет событий. Добавьте первое.
-                      </Typography>
-                    </CardContent>
-                  </Card>
-                ) : (
-                  <List sx={{ p: 0 }}>
-                    {groupedEvents.map((group, groupIndex) => (
-                      <Box key={`${group.header}-${groupIndex}`}>
-                        <Typography
-                          variant="overline"
-                          color="text.secondary"
-                          sx={{ display: 'block', mb: 1, mt: groupIndex === 0 ? 0 : 2 }}
-                        >
-                          {group.header}
-                        </Typography>
-                        {group.items.map((event, index) => {
-                          const tone = eventTypeTones[event.type];
-                          return (
-                            <Box key={event.id}>
-                              <ListItem
-                                alignItems="flex-start"
-                                secondaryAction={
-                                  <IconButton
-                                    edge="end"
-                                    onClick={() => setEventDeleteId(event.id)}
-                                  >
-                                    <DeleteOutlineIcon />
-                                  </IconButton>
-                                }
-                              >
-                                <ListItemAvatar>
-                                  <Avatar
-                                    sx={{
-                                      bgcolor: tone.bg,
-                                      color: tone.fg,
-                                    }}
-                                  >
-                                    {eventTypeIcons[event.type]}
-                                  </Avatar>
-                                </ListItemAvatar>
-                                <ListItemText
-                                  primary={
-                                    <Stack
-                                      direction="row"
-                                      spacing={1}
-                                      alignItems="center"
-                                    >
-                                      <Typography fontWeight={600}>
-                                        {eventTypeLabels[event.type]}
-                                      </Typography>
-                                      {event.mood ? (
-                                        <Typography variant="body2">
-                                          {event.mood}
-                                        </Typography>
-                                      ) : null}
-                                    </Stack>
-                                  }
-                                  secondary={
-                                    <Stack spacing={0.5}>
-                                      <Typography variant="body2" color="text.secondary">
-                                        {formatTime(event.at)}
-                                      </Typography>
-                                      {event.text ? (
-                                        <Typography variant="body2">
-                                          {event.text}
-                                        </Typography>
-                                      ) : null}
-                                    </Stack>
-                                  }
-                                />
-                              </ListItem>
-                              {index < group.items.length - 1 ? <Divider /> : null}
-                            </Box>
-                          );
-                        })}
-                      </Box>
-                    ))}
-                  </List>
-                )}
                 <Button
-                  variant="outlined"
+                  variant="contained"
                   startIcon={<AddIcon />}
-                  sx={{ borderRadius: 999, textTransform: 'none' }}
+                  sx={{ textTransform: 'none' }}
                   onClick={() => {
                     setEventAt(toDatetimeLocalValue(new Date().toISOString()));
                     setEventDialogOpen(true);
@@ -731,176 +724,341 @@ const ProfileDetailScreen = () => {
                 >
                   Добавить событие
                 </Button>
-              </Stack>
-            </TabPanel>
-
-            <TabPanel value={tab} index={1}>
-              <Stack spacing={2}>
-                <TextField
-                  label="Заметки"
-                  multiline
-                  minRows={5}
-                  value={notesDraft}
-                  onChange={(event) => setNotesDraft(event.target.value)}
-                />
-                <Stack spacing={2}>
-                  <TextField
-                    label="Telegram"
-                    value={telegramDraft}
-                    onChange={(event) => setTelegramDraft(event.target.value)}
-                  />
-                  <TextField
-                    label="Instagram"
-                    value={instagramDraft}
-                    onChange={(event) => setInstagramDraft(event.target.value)}
-                  />
-                  {!hideScores ? (
-                    <>
-                      <Stack spacing={1}>
-                        <Typography variant="body2" color="text.secondary">
-                          Привлекательность
-                        </Typography>
-                        <Rating
-                          value={attractivenessDraft}
-                          max={5}
-                          icon={
-                            <span role="img" aria-label="attractiveness">
-                              🍑
-                            </span>
-                          }
-                          emptyIcon={
-                            <span role="img" aria-label="attractiveness">
-                              🍑
-                            </span>
-                          }
-                          onChange={(_, value) => setAttractivenessDraft(value)}
-                        />
-                      </Stack>
-                      <Stack spacing={1}>
-                        <Typography variant="body2" color="text.secondary">
-                          Вайб
-                        </Typography>
-                        <Rating
-                          value={vibeDraft}
-                          max={5}
-                          icon={
-                            <span role="img" aria-label="vibe">
-                              ✨
-                            </span>
-                          }
-                          emptyIcon={
-                            <span role="img" aria-label="vibe">
-                              ✨
-                            </span>
-                          }
-                          onChange={(_, value) => setVibeDraft(value)}
-                        />
-                      </Stack>
-                    </>
-                  ) : (
-                    <Typography variant="body2" color="text.secondary">
-                      Оценки скрыты паник-режимом.
-                    </Typography>
-                  )}
-                </Stack>
-              </Stack>
-            </TabPanel>
-
-            <TabPanel value={tab} index={2}>
-              <Stack spacing={2}>
                 <Button
                   variant="outlined"
-                  startIcon={<AddIcon />}
-                  sx={{ borderRadius: 999, textTransform: 'none', alignSelf: 'flex-start' }}
+                  startIcon={<PhotoLibraryIcon />}
+                  sx={{ textTransform: 'none' }}
                   onClick={() => fileInputRef.current?.click()}
                 >
                   Добавить фото
                 </Button>
-                {galleryItems.length === 0 ? (
-                  <Card variant="outlined" sx={{ borderRadius: 4 }}>
-                    <CardContent>
-                      <Typography color="text.secondary">
-                        {galleryEmptyLabel}
-                      </Typography>
-                    </CardContent>
-                  </Card>
-                ) : (
-                  <Box
-                    sx={{
-                      display: 'grid',
-                      gridTemplateColumns: {
-                        xs: 'repeat(2, minmax(0, 1fr))',
-                        sm: 'repeat(3, minmax(0, 1fr))',
-                      },
-                      gap: 2,
-                    }}
-                  >
-                    {galleryItems.map((photo) => (
-                      <PhotoFrame
-                        key={photo.id}
-                        variant="tile"
-                        src={photo.url ?? undefined}
-                        alt={profile.name}
-                        hide={hidePhotos}
-                        overlay={
-                          <>
-                            <Stack
-                              direction="row"
-                              spacing={0.5}
+                <Button
+                  variant="text"
+                  startIcon={<EditOutlinedIcon />}
+                  sx={{ textTransform: 'none' }}
+                  onClick={() => profile && navigate(`/p/${profile.id}/edit`)}
+                >
+                  Редактировать
+                </Button>
+              </Stack>
+            </Stack>
+
+            <Box sx={{ maxWidth: 720 }}>
+              <Tabs
+                value={tab}
+                onChange={(_, value) => setTab(value)}
+                variant="scrollable"
+                scrollButtons="auto"
+                allowScrollButtonsMobile
+                sx={{
+                  minHeight: 44,
+                  '& .MuiTab-root': {
+                    textTransform: 'none',
+                    fontWeight: 600,
+                    minHeight: 44,
+                  },
+                }}
+              >
+                <Tab label="Таймлайн" />
+                <Tab label="Заметки" />
+                <Tab label="Галерея" />
+              </Tabs>
+            </Box>
+
+            <TabPanel value={tab} index={0}>
+              {events.length === 0 ? (
+                <EmptyStateCard
+                  icon="📅"
+                  title="Пока нет событий"
+                  description="Добавьте первое событие, чтобы сохранить историю."
+                  actionLabel="Добавить событие"
+                  onAction={() => {
+                    setEventAt(toDatetimeLocalValue(new Date().toISOString()));
+                    setEventDialogOpen(true);
+                  }}
+                  isDesktop={isDesktop}
+                />
+              ) : (
+                <Card variant="outlined" sx={{ borderRadius: 24 }}>
+                  <CardContent>
+                    <Stack spacing={2}>
+                      <List sx={{ p: 0 }}>
+                        {groupedEvents.map((group, groupIndex) => (
+                          <Box key={`${group.header}-${groupIndex}`}>
+                            <Typography
+                              variant="overline"
+                              color="text.secondary"
                               sx={{
-                                position: 'absolute',
-                                top: 8,
-                                right: 8,
+                                display: 'block',
+                                mb: 1,
+                                mt: groupIndex === 0 ? 0 : 2,
                               }}
                             >
-                              <IconButton
-                                size="small"
-                                sx={{ bgcolor: 'rgba(255,255,255,0.9)' }}
-                                aria-label="Сделать главным"
-                                onClick={() => handleMakeMainPhoto(photo.id)}
-                              >
-                                <StarIcon fontSize="small" />
-                              </IconButton>
-                              <IconButton
-                                size="small"
-                                sx={{ bgcolor: 'rgba(255,255,255,0.9)' }}
-                                aria-label="Удалить фото"
-                                onClick={async () => {
-                                  try {
-                                    await removePhoto(profile.id, photo.id);
-                                    await loadProfile();
-                                  } catch (error) {
-                                    console.error(error);
-                                    setSnackbarMessage('Не удалось удалить фото');
-                                  }
-                                }}
-                              >
-                                <CloseIcon fontSize="small" />
-                              </IconButton>
-                            </Stack>
-                            {profile.photoIds[0] === photo.id ? (
-                              <Chip
-                                label="Главное"
-                                size="small"
-                                sx={{
-                                  position: 'absolute',
-                                  left: 8,
-                                  bottom: 8,
-                                  bgcolor: 'rgba(255,255,255,0.9)',
-                                }}
-                              />
-                            ) : null}
-                          </>
-                        }
+                              {group.header}
+                            </Typography>
+                            {group.items.map((event, index) => {
+                              const tone = eventTypeTones[event.type];
+                              return (
+                                <Box key={event.id}>
+                                  <ListItem
+                                    alignItems="flex-start"
+                                    secondaryAction={
+                                      <IconButton
+                                        edge="end"
+                                        onClick={() => setEventDeleteId(event.id)}
+                                      >
+                                        <DeleteOutlineIcon />
+                                      </IconButton>
+                                    }
+                                  >
+                                    <ListItemAvatar>
+                                      <Avatar
+                                        sx={{
+                                          bgcolor: tone.bg,
+                                          color: tone.fg,
+                                        }}
+                                      >
+                                        {eventTypeIcons[event.type]}
+                                      </Avatar>
+                                    </ListItemAvatar>
+                                    <ListItemText
+                                      primary={
+                                        <Stack
+                                          direction="row"
+                                          spacing={1}
+                                          alignItems="center"
+                                        >
+                                          <Typography fontWeight={600}>
+                                            {eventTypeLabels[event.type]}
+                                          </Typography>
+                                          {event.mood ? (
+                                            <Typography variant="body2">
+                                              {event.mood}
+                                            </Typography>
+                                          ) : null}
+                                        </Stack>
+                                      }
+                                      secondary={
+                                        <Stack spacing={0.5}>
+                                          <Typography
+                                            variant="body2"
+                                            color="text.secondary"
+                                          >
+                                            {formatTime(event.at)}
+                                          </Typography>
+                                          {event.text ? (
+                                            <Typography variant="body2">
+                                              {event.text}
+                                            </Typography>
+                                          ) : null}
+                                        </Stack>
+                                      }
+                                    />
+                                  </ListItem>
+                                  {index < group.items.length - 1 ? (
+                                    <Divider />
+                                  ) : null}
+                                </Box>
+                              );
+                            })}
+                          </Box>
+                        ))}
+                      </List>
+                      <Button
+                        variant="outlined"
+                        startIcon={<AddIcon />}
+                        sx={{ textTransform: 'none', alignSelf: 'flex-start' }}
+                        onClick={() => {
+                          setEventAt(toDatetimeLocalValue(new Date().toISOString()));
+                          setEventDialogOpen(true);
+                        }}
+                      >
+                        Добавить событие
+                      </Button>
+                    </Stack>
+                  </CardContent>
+                </Card>
+              )}
+            </TabPanel>
+
+            <TabPanel value={tab} index={1}>
+              <Card variant="outlined" sx={{ borderRadius: 24 }}>
+                <CardContent>
+                  <Stack spacing={2}>
+                    <TextField
+                      label="Заметки"
+                      multiline
+                      minRows={5}
+                      value={notesDraft}
+                      onChange={(event) => setNotesDraft(event.target.value)}
+                    />
+                    <Stack spacing={2}>
+                      <TextField
+                        label="Telegram"
+                        value={telegramDraft}
+                        onChange={(event) => setTelegramDraft(event.target.value)}
                       />
-                    ))}
-                  </Box>
-                )}
-              </Stack>
+                      <TextField
+                        label="Instagram"
+                        value={instagramDraft}
+                        onChange={(event) => setInstagramDraft(event.target.value)}
+                      />
+                      {!hideScores ? (
+                        <>
+                          <Stack spacing={1}>
+                            <Typography variant="body2" color="text.secondary">
+                              Привлекательность
+                            </Typography>
+                            <Rating
+                              value={attractivenessDraft}
+                              max={5}
+                              icon={
+                                <span role="img" aria-label="attractiveness">
+                                  🍑
+                                </span>
+                              }
+                              emptyIcon={
+                                <span role="img" aria-label="attractiveness">
+                                  🍑
+                                </span>
+                              }
+                              onChange={(_, value) => setAttractivenessDraft(value)}
+                            />
+                          </Stack>
+                          <Stack spacing={1}>
+                            <Typography variant="body2" color="text.secondary">
+                              Вайб
+                            </Typography>
+                            <Rating
+                              value={vibeDraft}
+                              max={5}
+                              icon={
+                                <span role="img" aria-label="vibe">
+                                  ✨
+                                </span>
+                              }
+                              emptyIcon={
+                                <span role="img" aria-label="vibe">
+                                  ✨
+                                </span>
+                              }
+                              onChange={(_, value) => setVibeDraft(value)}
+                            />
+                          </Stack>
+                        </>
+                      ) : (
+                        <Typography variant="body2" color="text.secondary">
+                          Оценки скрыты паник-режимом.
+                        </Typography>
+                      )}
+                    </Stack>
+                  </Stack>
+                </CardContent>
+              </Card>
+            </TabPanel>
+
+            <TabPanel value={tab} index={2}>
+              {galleryItems.length === 0 ? (
+                <EmptyStateCard
+                  icon="🖼️"
+                  title="Пока нет фото"
+                  description={galleryEmptyLabel}
+                  actionLabel="Добавить фото"
+                  onAction={() => fileInputRef.current?.click()}
+                  isDesktop={isDesktop}
+                />
+              ) : (
+                <Card variant="outlined" sx={{ borderRadius: 24 }}>
+                  <CardContent>
+                    <Stack spacing={2}>
+                      <Button
+                        variant="outlined"
+                        startIcon={<AddIcon />}
+                        sx={{ textTransform: 'none', alignSelf: 'flex-start' }}
+                        onClick={() => fileInputRef.current?.click()}
+                      >
+                        Добавить фото
+                      </Button>
+                      <Box
+                        sx={{
+                          display: 'grid',
+                          gridTemplateColumns: {
+                            xs: 'repeat(2, minmax(0, 1fr))',
+                            sm: 'repeat(3, minmax(0, 1fr))',
+                          },
+                          gap: 2,
+                        }}
+                      >
+                        {galleryItems.map((photo) => (
+                          <PhotoFrame
+                            key={photo.id}
+                            variant="tile"
+                            src={photo.url ?? undefined}
+                            alt={profile.name}
+                            hide={hidePhotos}
+                            overlay={
+                              <>
+                                <Stack
+                                  direction="row"
+                                  spacing={0.5}
+                                  sx={{
+                                    position: 'absolute',
+                                    top: 8,
+                                    right: 8,
+                                  }}
+                                >
+                                  <IconButton
+                                    size="small"
+                                    sx={{ bgcolor: 'rgba(255,255,255,0.9)' }}
+                                    aria-label="Сделать главным"
+                                    onClick={() => handleMakeMainPhoto(photo.id)}
+                                  >
+                                    <StarIcon fontSize="small" />
+                                  </IconButton>
+                                  <IconButton
+                                    size="small"
+                                    sx={{ bgcolor: 'rgba(255,255,255,0.9)' }}
+                                    aria-label="Удалить фото"
+                                    onClick={async () => {
+                                      try {
+                                        await removePhoto(profile.id, photo.id);
+                                        await loadProfile();
+                                      } catch (error) {
+                                        console.error(error);
+                                        setSnackbarMessage(
+                                          'Не удалось удалить фото',
+                                        );
+                                      }
+                                    }}
+                                  >
+                                    <CloseIcon fontSize="small" />
+                                  </IconButton>
+                                </Stack>
+                                {profile.photoIds[0] === photo.id ? (
+                                  <Chip
+                                    label="Главное"
+                                    size="small"
+                                    sx={{
+                                      position: 'absolute',
+                                      left: 8,
+                                      bottom: 8,
+                                      bgcolor: 'rgba(255,255,255,0.9)',
+                                    }}
+                                  />
+                                ) : null}
+                              </>
+                            }
+                          />
+                        ))}
+                      </Box>
+                    </Stack>
+                  </CardContent>
+                </Card>
+              )}
             </TabPanel>
           </Stack>
         ) : null}
-      </Container>
+      </Box>
 
       <Dialog open={eventDialogOpen} onClose={() => setEventDialogOpen(false)}>
         <DialogTitle>Новое событие</DialogTitle>

@@ -19,7 +19,7 @@ import {
 import AddIcon from '@mui/icons-material/Add';
 import { useTheme } from '@mui/material/styles';
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useMatch, useNavigate } from 'react-router-dom';
 import type { Profile, ProfileStatus } from '../domain/types';
 import ProfileCard from '../components/ProfileCard';
 import { listProfiles } from '../storage';
@@ -76,6 +76,8 @@ const ProfilesListPane = ({
   const [sortOption, setSortOption] = useState<SortOption>('updatedDesc');
   const [followUpOnly, setFollowUpOnly] = useState(false);
   const autoSelectRef = useRef<string | null>(null);
+  const detailMatch = useMatch('/p/:id');
+  const selectedProfileId = detailMatch?.params.id;
 
   useEffect(() => {
     let active = true;
@@ -214,6 +216,7 @@ const ProfilesListPane = ({
           profile={profile}
           onOpen={handleOpenProfile}
           dense={isDesktop}
+          selected={profile.id === selectedProfileId}
           onEventAdded={async () => {
             const data = await listProfiles();
             setProfiles(data);
@@ -224,64 +227,79 @@ const ProfilesListPane = ({
   );
 
   const wrapperSx = {
-    px: variant === 'full' ? { xs: 2, sm: 3 } : { xs: 2, md: 3 },
-    py: 3,
+    px: variant === 'full' ? { xs: 2, sm: 3 } : { xs: 2, md: 2.5 },
+    pt: 3,
+    pb: 2,
   };
 
-  const body = (
-    <Stack spacing={2} sx={{ mb: 3 }}>
-      <Stack
-        direction={{ xs: 'column', md: 'row' }}
-        spacing={2}
-        alignItems={{ md: 'center' }}
-        justifyContent="space-between"
-      >
-        <Box>
-          <Typography variant="h5">Мои анкеты</Typography>
-          <Typography variant="body1" color="text.secondary">
-            Соберите карточки и возвращайтесь к ним в любое время.
-          </Typography>
-        </Box>
-      </Stack>
-
-      <Card variant="outlined" sx={{ borderRadius: 3 }}>
-        <CardActionArea
-          onClick={() => {
-            setFollowUpOnly(true);
-            setSortOption('followUpDesc');
-          }}
-          sx={{ p: 2 }}
+  const header = (
+    <Stack
+      direction={{ xs: 'column', md: 'row' }}
+      spacing={2}
+      alignItems={{ md: 'center' }}
+      justifyContent="space-between"
+    >
+      <Box>
+        <Typography variant="h5">Мои анкеты</Typography>
+        <Typography variant="body1" color="text.secondary">
+          Соберите карточки и возвращайтесь к ним в любое время.
+        </Typography>
+      </Box>
+      {isDesktop ? (
+        <Button
+          variant="contained"
+          size="small"
+          startIcon={<AddIcon />}
+          onClick={() => navigate('/new')}
         >
-          <Stack
-            direction="row"
-            spacing={2}
-            justifyContent="space-between"
-            alignItems="center"
-          >
-            <Stack spacing={0.5}>
-              <Typography variant="caption" color="text.secondary">
-                Всего
-              </Typography>
-              <Typography variant="h6">{totalCount}</Typography>
-            </Stack>
-            <Stack spacing={0.5}>
-              <Typography variant="caption" color="text.secondary">
-                Активные
-              </Typography>
-              <Typography variant="h6">{activeCount}</Typography>
-            </Stack>
-            <Stack spacing={0.5}>
-              <Typography variant="caption" color="text.secondary">
-                Нужны follow-up
-              </Typography>
-              <Typography variant="h6" color="primary">
-                {followUpCount}
-              </Typography>
-            </Stack>
-          </Stack>
-        </CardActionArea>
-      </Card>
+          Добавить
+        </Button>
+      ) : null}
+    </Stack>
+  );
 
+  const statsCard = (
+    <Card variant="outlined" sx={{ borderRadius: 24 }}>
+      <CardActionArea
+        onClick={() => {
+          setFollowUpOnly(true);
+          setSortOption('followUpDesc');
+        }}
+        sx={{ p: 2 }}
+      >
+        <Stack
+          direction="row"
+          spacing={2}
+          justifyContent="space-between"
+          alignItems="center"
+        >
+          <Stack spacing={0.5}>
+            <Typography variant="caption" color="text.secondary">
+              Всего
+            </Typography>
+            <Typography variant="h6">{totalCount}</Typography>
+          </Stack>
+          <Stack spacing={0.5}>
+            <Typography variant="caption" color="text.secondary">
+              Активные
+            </Typography>
+            <Typography variant="h6">{activeCount}</Typography>
+          </Stack>
+          <Stack spacing={0.5}>
+            <Typography variant="caption" color="text.secondary">
+              Нужны follow-up
+            </Typography>
+            <Typography variant="h6" color="primary">
+              {followUpCount}
+            </Typography>
+          </Stack>
+        </Stack>
+      </CardActionArea>
+    </Card>
+  );
+
+  const filtersCard = (
+    <Card variant="outlined" sx={{ borderRadius: 24, p: 2 }}>
       <Stack spacing={2}>
         <TextField
           label="Поиск"
@@ -336,6 +354,14 @@ const ProfilesListPane = ({
           </FormControl>
         </Stack>
       </Stack>
+    </Card>
+  );
+
+  const body = (
+    <Stack spacing={2}>
+      {header}
+      {statsCard}
+      {filtersCard}
     </Stack>
   );
 
@@ -343,31 +369,46 @@ const ProfilesListPane = ({
     <Box sx={{ pb: { xs: 12, md: 2 } }}>
       {variant === 'full' ? (
         <Container maxWidth="sm" sx={wrapperSx}>
-          {body}
+          <Stack spacing={2} sx={{ mb: 3 }}>
+            {body}
+          </Stack>
           {listContent}
         </Container>
       ) : (
-        <Box sx={wrapperSx}>
-          {body}
-          {listContent}
+        <Box
+          sx={{
+            ...wrapperSx,
+            display: 'flex',
+            flexDirection: 'column',
+            height: '100vh',
+          }}
+        >
+          <Stack spacing={2} sx={{ pb: 2 }}>
+            {body}
+          </Stack>
+          <Box sx={{ flex: 1, overflowY: 'auto', pb: 2 }}>
+            {listContent}
+          </Box>
         </Box>
       )}
 
-      <Fab
-        color="primary"
-        aria-label="Добавить"
-        variant={isWide ? 'extended' : 'circular'}
-        sx={{
-          position: 'fixed',
-          right: { xs: 24, md: 32 },
-          bottom: { xs: 'calc(env(safe-area-inset-bottom) + 88px)', md: 24 },
-          boxShadow: 4,
-        }}
-        onClick={() => navigate('/new')}
-      >
-        <AddIcon sx={{ mr: isWide ? 1 : 0 }} />
-        {isWide ? 'Добавить' : null}
-      </Fab>
+      {!isDesktop ? (
+        <Fab
+          color="primary"
+          aria-label="Добавить"
+          variant={isWide ? 'extended' : 'circular'}
+          sx={{
+            position: 'fixed',
+            right: { xs: 24, md: 32 },
+            bottom: { xs: 'calc(env(safe-area-inset-bottom) + 88px)', md: 24 },
+            boxShadow: 4,
+          }}
+          onClick={() => navigate('/new')}
+        >
+          <AddIcon sx={{ mr: isWide ? 1 : 0 }} />
+          {isWide ? 'Добавить' : null}
+        </Fab>
+      ) : null}
     </Box>
   );
 };
