@@ -6,6 +6,7 @@ import {
   CardContent,
   Container,
   FormControl,
+  Grid,
   IconButton,
   InputLabel,
   MenuItem,
@@ -23,7 +24,6 @@ import SaveOutlinedIcon from '@mui/icons-material/SaveOutlined';
 import AddPhotoAlternateOutlinedIcon from '@mui/icons-material/AddPhotoAlternateOutlined';
 import StarRoundedIcon from '@mui/icons-material/StarRounded';
 import CloseRoundedIcon from '@mui/icons-material/CloseRounded';
-import InsertPhotoOutlinedIcon from '@mui/icons-material/InsertPhotoOutlined';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useTheme } from '@mui/material/styles';
@@ -37,6 +37,7 @@ import {
   updateProfile,
 } from '../storage';
 import { usePrivacySettings } from '../app/usePrivacySettings';
+import PhotoFrame from '../components/PhotoFrame';
 
 const profileStatuses: ProfileStatus[] = [
   'Новая',
@@ -280,6 +281,16 @@ const ProfileEditorScreen = () => {
         : undefined,
     [hideScores],
   );
+  const tileItems = profile
+    ? hidePhotos
+      ? profile.photoIds.map((photoId) => ({ id: photoId, url: null }))
+      : photoUrls
+    : hidePhotos
+      ? pendingPreviews.map((photo) => ({ id: photo.id, url: null, file: photo.file }))
+      : pendingPreviews;
+  const emptyPhotosLabel = hidePhotos
+    ? 'Фото скрыты паник-режимом.'
+    : 'Добавьте первые фото для анкеты.';
 
   return (
     <Box>
@@ -472,147 +483,61 @@ const ProfileEditorScreen = () => {
                       Добавить фото
                     </Button>
                   </Stack>
-                  {hidePhotos ? (
-                    <Box
-                      sx={{
-                        borderRadius: 3,
-                        p: 3,
-                        bgcolor: 'grey.100',
-                        textAlign: 'center',
-                      }}
-                    >
-                      <InsertPhotoOutlinedIcon color="disabled" />
-                      <Typography variant="body2" color="text.secondary">
-                        Фото скрыты паник-режимом
-                      </Typography>
-                    </Box>
-                  ) : profile && profile.photoIds.length > 0 ? (
-                    <Box
-                      sx={{
-                        display: 'grid',
-                        gridTemplateColumns: {
-                          xs: 'repeat(2, minmax(0, 1fr))',
-                          sm: 'repeat(3, minmax(0, 1fr))',
-                        },
-                        gap: 2,
-                      }}
-                    >
-                      {photoUrls.map((photo) => (
-                        <Box
-                          key={photo.id}
-                          sx={{
-                            position: 'relative',
-                            borderRadius: 3,
-                            overflow: 'hidden',
-                            boxShadow: '0px 8px 24px rgba(15, 23, 42, 0.12)',
-                          }}
-                        >
-                          <Box
-                            component="img"
-                            src={photo.url}
+                  {tileItems.length > 0 ? (
+                    <Grid container spacing={1.5} columns={{ xs: 2, sm: 3, md: 4 }}>
+                      {tileItems.map((photo) => (
+                        <Grid item xs={1} key={photo.id}>
+                          <PhotoFrame
+                            variant="tile"
+                            src={photo.url ?? undefined}
                             alt={name || 'Фото'}
-                            sx={{
-                              width: '100%',
-                              height: 160,
-                              objectFit: 'cover',
-                              display: 'block',
-                            }}
+                            hide={hidePhotos}
+                            overlay={
+                              <Stack
+                                direction="row"
+                                spacing={0.5}
+                                sx={{
+                                  position: 'absolute',
+                                  top: 8,
+                                  right: 8,
+                                }}
+                              >
+                                {profile ? (
+                                  <IconButton
+                                    size="small"
+                                    sx={{ bgcolor: 'rgba(255,255,255,0.9)' }}
+                                    aria-label="Сделать главным"
+                                    onClick={() => handleMakeMainPhoto(photo.id)}
+                                  >
+                                    <StarRoundedIcon fontSize="small" />
+                                  </IconButton>
+                                ) : null}
+                                <IconButton
+                                  size="small"
+                                  sx={{ bgcolor: 'rgba(255,255,255,0.9)' }}
+                                  aria-label="Удалить фото"
+                                  onClick={async () => {
+                                    if (!profile) {
+                                      handleRemovePendingPhoto(photo.id);
+                                      return;
+                                    }
+                                    try {
+                                      await removePhoto(profile.id, photo.id);
+                                      await loadProfile();
+                                    } catch (error) {
+                                      console.error(error);
+                                      setSnackbarMessage('Не удалось удалить фото');
+                                    }
+                                  }}
+                                >
+                                  <CloseRoundedIcon fontSize="small" />
+                                </IconButton>
+                              </Stack>
+                            }
                           />
-                          <Stack
-                            direction="row"
-                            spacing={0.5}
-                            sx={{
-                              position: 'absolute',
-                              top: 8,
-                              right: 8,
-                            }}
-                          >
-                            <IconButton
-                              size="small"
-                              sx={{ bgcolor: 'rgba(255,255,255,0.9)' }}
-                              aria-label="Сделать главным"
-                              onClick={() => handleMakeMainPhoto(photo.id)}
-                            >
-                              <StarRoundedIcon fontSize="small" />
-                            </IconButton>
-                            <IconButton
-                              size="small"
-                              sx={{ bgcolor: 'rgba(255,255,255,0.9)' }}
-                              aria-label="Удалить фото"
-                              onClick={async () => {
-                                if (!profile) {
-                                  return;
-                                }
-                                try {
-                                  await removePhoto(profile.id, photo.id);
-                                  await loadProfile();
-                                } catch (error) {
-                                  console.error(error);
-                                  setSnackbarMessage(
-                                    'Не удалось удалить фото',
-                                  );
-                                }
-                              }}
-                            >
-                              <CloseRoundedIcon fontSize="small" />
-                            </IconButton>
-                          </Stack>
-                        </Box>
+                        </Grid>
                       ))}
-                    </Box>
-                  ) : pendingPreviews.length > 0 ? (
-                    <Box
-                      sx={{
-                        display: 'grid',
-                        gridTemplateColumns: {
-                          xs: 'repeat(2, minmax(0, 1fr))',
-                          sm: 'repeat(3, minmax(0, 1fr))',
-                        },
-                        gap: 2,
-                      }}
-                    >
-                      {pendingPreviews.map((photo) => (
-                        <Box
-                          key={photo.id}
-                          sx={{
-                            position: 'relative',
-                            borderRadius: 3,
-                            overflow: 'hidden',
-                            boxShadow: '0px 8px 24px rgba(15, 23, 42, 0.12)',
-                          }}
-                        >
-                          <Box
-                            component="img"
-                            src={photo.url}
-                            alt={name || 'Фото'}
-                            sx={{
-                              width: '100%',
-                              height: 160,
-                              objectFit: 'cover',
-                              display: 'block',
-                            }}
-                          />
-                          <Stack
-                            direction="row"
-                            spacing={0.5}
-                            sx={{
-                              position: 'absolute',
-                              top: 8,
-                              right: 8,
-                            }}
-                          >
-                            <IconButton
-                              size="small"
-                              sx={{ bgcolor: 'rgba(255,255,255,0.9)' }}
-                              aria-label="Удалить фото"
-                              onClick={() => handleRemovePendingPhoto(photo.id)}
-                            >
-                              <CloseRoundedIcon fontSize="small" />
-                            </IconButton>
-                          </Stack>
-                        </Box>
-                      ))}
-                    </Box>
+                    </Grid>
                   ) : (
                     <Box
                       sx={{
@@ -623,7 +548,7 @@ const ProfileEditorScreen = () => {
                       }}
                     >
                       <Typography variant="body2" color="text.secondary">
-                        Добавьте первые фото для анкеты.
+                        {emptyPhotosLabel}
                       </Typography>
                     </Box>
                   )}

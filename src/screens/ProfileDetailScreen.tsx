@@ -35,7 +35,6 @@ import {
 } from '@mui/material';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import MoreVertIcon from '@mui/icons-material/MoreVert';
-import InsertPhotoOutlinedIcon from '@mui/icons-material/InsertPhotoOutlined';
 import ChatBubbleOutlineIcon from '@mui/icons-material/ChatBubbleOutline';
 import CallIcon from '@mui/icons-material/Call';
 import EventIcon from '@mui/icons-material/Event';
@@ -80,6 +79,7 @@ import {
   toDatetimeLocalValue,
 } from '../utils/date';
 import { usePrivacySettings } from '../app/usePrivacySettings';
+import PhotoFrame from '../components/PhotoFrame';
 
 const statusTones: Record<ProfileStatus, { bg: string; fg: string }> = {
   Новая: { bg: '#E3F2FD', fg: '#0D47A1' },
@@ -416,7 +416,13 @@ const ProfileDetailScreen = () => {
     }
   };
 
-  const heroPhotoUrl = hidePhotos ? undefined : photoUrls[0]?.url;
+  const heroPhotoUrl = photoUrls[0]?.url;
+  const galleryItems = hidePhotos
+    ? profile?.photoIds.map((photoId) => ({ id: photoId, url: null })) ?? []
+    : photoUrls;
+  const galleryEmptyLabel = hidePhotos
+    ? 'Фото скрыты паник-режимом.'
+    : 'Здесь будут фото. Добавьте первые снимки.';
 
   return (
     <Box sx={{ minHeight: '100vh', bgcolor: 'background.default' }}>
@@ -495,79 +501,49 @@ const ProfileDetailScreen = () => {
           <Stack spacing={3}>
             <Box
               sx={{
-                borderRadius: 7,
+                borderRadius: 20,
                 overflow: 'hidden',
                 boxShadow: '0px 18px 40px rgba(15, 23, 42, 0.14)',
-                position: 'relative',
-                bgcolor: 'grey.100',
               }}
             >
-              <Box
-                sx={{
-                  aspectRatio: { xs: '16 / 9', md: '21 / 9' },
-                  width: '100%',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  bgcolor: heroPhotoUrl
-                    ? 'transparent'
-                    : 'rgba(248,250,252,1)',
-                  background: heroPhotoUrl
-                    ? 'transparent'
-                    : 'linear-gradient(135deg, rgba(224,231,255,0.9), rgba(254,215,170,0.9))',
-                }}
-              >
-                {heroPhotoUrl ? (
-                  <Box
-                    component="img"
-                    src={heroPhotoUrl}
-                    alt={profile.name}
+              <PhotoFrame
+                variant="hero"
+                src={heroPhotoUrl}
+                alt={profile.name}
+                hide={hidePhotos}
+                overlay={
+                  <Stack
+                    direction="row"
+                    spacing={1}
+                    alignItems="center"
                     sx={{
-                      width: '100%',
-                      height: '100%',
-                      objectFit: 'cover',
-                      display: 'block',
+                      position: 'absolute',
+                      left: 16,
+                      bottom: 16,
+                      bgcolor: 'rgba(255,255,255,0.9)',
+                      borderRadius: 999,
+                      px: 1.5,
+                      py: 0.75,
+                      boxShadow: '0px 6px 20px rgba(15, 23, 42, 0.12)',
                     }}
-                  />
-                ) : (
-                  <Stack alignItems="center" spacing={1}>
-                    <InsertPhotoOutlinedIcon fontSize="large" />
-                    <Typography color="text.secondary">
-                      {hidePhotos ? 'Фото скрыты' : 'Нет основного фото'}
-                    </Typography>
+                  >
+                    {statusTone ? (
+                      <Chip
+                        label={profile.status}
+                        size="small"
+                        sx={{
+                          bgcolor: statusTone.bg,
+                          color: statusTone.fg,
+                          fontWeight: 600,
+                        }}
+                      />
+                    ) : null}
+                    {ratingLabel ? (
+                      <Typography variant="body2">{ratingLabel}</Typography>
+                    ) : null}
                   </Stack>
-                )}
-              </Box>
-              <Stack
-                direction="row"
-                spacing={1}
-                alignItems="center"
-                sx={{
-                  position: 'absolute',
-                  left: 16,
-                  bottom: 16,
-                  bgcolor: 'rgba(255,255,255,0.9)',
-                  borderRadius: 999,
-                  px: 1.5,
-                  py: 0.75,
-                  boxShadow: '0px 6px 20px rgba(15, 23, 42, 0.12)',
-                }}
-              >
-                {statusTone ? (
-                  <Chip
-                    label={profile.status}
-                    size="small"
-                    sx={{
-                      bgcolor: statusTone.bg,
-                      color: statusTone.fg,
-                      fontWeight: 600,
-                    }}
-                  />
-                ) : null}
-                {ratingLabel ? (
-                  <Typography variant="body2">{ratingLabel}</Typography>
-                ) : null}
-              </Stack>
+                }
+              />
             </Box>
 
             <Stack
@@ -838,19 +814,11 @@ const ProfileDetailScreen = () => {
                 >
                   Добавить фото
                 </Button>
-                {hidePhotos ? (
+                {galleryItems.length === 0 ? (
                   <Card variant="outlined" sx={{ borderRadius: 4 }}>
                     <CardContent>
                       <Typography color="text.secondary">
-                        Фото скрыты паник-режимом.
-                      </Typography>
-                    </CardContent>
-                  </Card>
-                ) : photoUrls.length === 0 ? (
-                  <Card variant="outlined" sx={{ borderRadius: 4 }}>
-                    <CardContent>
-                      <Typography color="text.secondary">
-                        Здесь будут фото. Добавьте первые снимки.
+                        {galleryEmptyLabel}
                       </Typography>
                     </CardContent>
                   </Card>
@@ -858,78 +826,71 @@ const ProfileDetailScreen = () => {
                   <Box
                     sx={{
                       display: 'grid',
-                      gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
+                      gridTemplateColumns: {
+                        xs: 'repeat(2, minmax(0, 1fr))',
+                        sm: 'repeat(3, minmax(0, 1fr))',
+                      },
                       gap: 2,
                     }}
                   >
-                    {photoUrls.map((photo) => (
-                      <Box
+                    {galleryItems.map((photo) => (
+                      <PhotoFrame
                         key={photo.id}
-                        sx={{
-                          position: 'relative',
-                          borderRadius: 4,
-                          overflow: 'hidden',
-                          boxShadow: '0px 8px 24px rgba(15, 23, 42, 0.12)',
-                        }}
-                      >
-                        <Box
-                          component="img"
-                          src={photo.url}
-                          alt={profile.name}
-                          sx={{
-                            width: '100%',
-                            height: 160,
-                            objectFit: 'cover',
-                            display: 'block',
-                          }}
-                        />
-                        <Stack
-                          direction="row"
-                          spacing={0.5}
-                          sx={{
-                            position: 'absolute',
-                            top: 8,
-                            right: 8,
-                          }}
-                        >
-                          <IconButton
-                            size="small"
-                            sx={{ bgcolor: 'rgba(255,255,255,0.9)' }}
-                            aria-label="Сделать главным"
-                            onClick={() => handleMakeMainPhoto(photo.id)}
-                          >
-                            <StarIcon fontSize="small" />
-                          </IconButton>
-                          <IconButton
-                            size="small"
-                            sx={{ bgcolor: 'rgba(255,255,255,0.9)' }}
-                            aria-label="Удалить фото"
-                            onClick={async () => {
-                              try {
-                                await removePhoto(profile.id, photo.id);
-                                await loadProfile();
-                              } catch (error) {
-                                console.error(error);
-                                setSnackbarMessage('Не удалось удалить фото');
-                              }
-                            }}
-                          >
-                            <CloseIcon fontSize="small" />
-                          </IconButton>
-                        </Stack>
-                        {profile.photoIds[0] === photo.id ? (
-                          <Chip
-                            label="Главное"
-                            size="small"
-                            sx={{
-                              position: 'absolute',
-                              left: 8,
-                              bottom: 8,
-                              bgcolor: 'rgba(255,255,255,0.9)',
-                            }}
-                          />
-                        ) : null}
-                      </Box>
+                        variant="tile"
+                        src={photo.url ?? undefined}
+                        alt={profile.name}
+                        hide={hidePhotos}
+                        overlay={
+                          <>
+                            <Stack
+                              direction="row"
+                              spacing={0.5}
+                              sx={{
+                                position: 'absolute',
+                                top: 8,
+                                right: 8,
+                              }}
+                            >
+                              <IconButton
+                                size="small"
+                                sx={{ bgcolor: 'rgba(255,255,255,0.9)' }}
+                                aria-label="Сделать главным"
+                                onClick={() => handleMakeMainPhoto(photo.id)}
+                              >
+                                <StarIcon fontSize="small" />
+                              </IconButton>
+                              <IconButton
+                                size="small"
+                                sx={{ bgcolor: 'rgba(255,255,255,0.9)' }}
+                                aria-label="Удалить фото"
+                                onClick={async () => {
+                                  try {
+                                    await removePhoto(profile.id, photo.id);
+                                    await loadProfile();
+                                  } catch (error) {
+                                    console.error(error);
+                                    setSnackbarMessage('Не удалось удалить фото');
+                                  }
+                                }}
+                              >
+                                <CloseIcon fontSize="small" />
+                              </IconButton>
+                            </Stack>
+                            {profile.photoIds[0] === photo.id ? (
+                              <Chip
+                                label="Главное"
+                                size="small"
+                                sx={{
+                                  position: 'absolute',
+                                  left: 8,
+                                  bottom: 8,
+                                  bgcolor: 'rgba(255,255,255,0.9)',
+                                }}
+                              />
+                            ) : null}
+                          </>
+                        }
+                      />
                     ))}
                   </Box>
                 )}
