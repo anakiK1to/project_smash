@@ -13,14 +13,10 @@ import {
   Stack,
   Switch,
   TextField,
-  ToggleButton,
-  ToggleButtonGroup,
   Typography,
   useMediaQuery,
 } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
-import ViewListRoundedIcon from '@mui/icons-material/ViewListRounded';
-import ViewModuleRoundedIcon from '@mui/icons-material/ViewModuleRounded';
 import { useTheme } from '@mui/material/styles';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
@@ -36,8 +32,6 @@ type SortOption =
   | 'updatedAsc'
   | 'attractivenessDesc'
   | 'followUpDesc';
-
-type ViewMode = 'list' | 'grid';
 
 type ProfilesListPaneProps = {
   variant?: 'full' | 'pane';
@@ -81,7 +75,6 @@ const ProfilesListPane = ({
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('Все');
   const [sortOption, setSortOption] = useState<SortOption>('updatedDesc');
   const [followUpOnly, setFollowUpOnly] = useState(false);
-  const [viewMode, setViewMode] = useState<ViewMode>('list');
   const autoSelectRef = useRef<string | null>(null);
 
   useEffect(() => {
@@ -199,7 +192,6 @@ const ProfilesListPane = ({
   const handleOpenProfile =
     onProfileOpen ?? ((id: string) => navigate(`/p/${id}`));
 
-  const isGrid = isDesktop && viewMode === 'grid';
   const listContent = loading ? (
     <Stack spacing={2}>
       {Array.from({ length: 3 }).map((_, index) => (
@@ -214,31 +206,6 @@ const ProfilesListPane = ({
         Создать первую
       </Button>
     </Stack>
-  ) : isGrid ? (
-    <Box
-      sx={{
-        display: 'grid',
-        gridTemplateColumns: {
-          xs: '1fr',
-          md: 'repeat(2, minmax(0, 1fr))',
-          lg: 'repeat(3, minmax(0, 1fr))',
-        },
-        gap: 2,
-      }}
-    >
-      {filteredProfiles.map((profile) => (
-        <ProfileCard
-          key={profile.id}
-          profile={profile}
-          onOpen={handleOpenProfile}
-          layout="grid"
-          onEventAdded={async () => {
-            const data = await listProfiles();
-            setProfiles(data);
-          }}
-        />
-      ))}
-    </Box>
   ) : (
     <Stack spacing={2}>
       {filteredProfiles.map((profile) => (
@@ -275,32 +242,6 @@ const ProfilesListPane = ({
             Соберите карточки и возвращайтесь к ним в любое время.
           </Typography>
         </Box>
-        {isDesktop ? (
-          <ToggleButtonGroup
-            value={viewMode}
-            exclusive
-            onChange={(_, value) => {
-              if (value) {
-                setViewMode(value);
-              }
-            }}
-            size="small"
-            aria-label="Режим списка"
-          >
-            <ToggleButton value="list" aria-label="Список">
-              <ViewListRoundedIcon fontSize="small" />
-              <Typography variant="caption" sx={{ ml: 1 }}>
-                Список
-              </Typography>
-            </ToggleButton>
-            <ToggleButton value="grid" aria-label="Сетка">
-              <ViewModuleRoundedIcon fontSize="small" />
-              <Typography variant="caption" sx={{ ml: 1 }}>
-                Сетка
-              </Typography>
-            </ToggleButton>
-          </ToggleButtonGroup>
-        ) : null}
       </Stack>
 
       <Card variant="outlined" sx={{ borderRadius: 3 }}>
