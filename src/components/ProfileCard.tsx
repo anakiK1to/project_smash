@@ -4,15 +4,20 @@ import {
   Card,
   CardActionArea,
   Chip,
+  IconButton,
+  Snackbar,
   Stack,
   Typography,
 } from '@mui/material';
 import PhotoIcon from '@mui/icons-material/InsertPhotoOutlined';
 import TelegramIcon from '@mui/icons-material/Telegram';
 import InstagramIcon from '@mui/icons-material/Instagram';
+import ChatBubbleOutlineIcon from '@mui/icons-material/ChatBubbleOutline';
+import CallIcon from '@mui/icons-material/Call';
+import EventIcon from '@mui/icons-material/Event';
 import type { Profile, ProfileStatus } from '../domain/types';
-import { getPhoto } from '../storage';
-import { formatRelative } from '../utils/time';
+import { addEvent, getPhoto, nowIso } from '../storage';
+import { daysSince, formatRelative } from '../utils/time';
 import { usePrivacySettings } from '../app/usePrivacySettings';
 
 const statusTones: Record<ProfileStatus, { bg: string; fg: string }> = {
@@ -27,10 +32,12 @@ const statusTones: Record<ProfileStatus, { bg: string; fg: string }> = {
 type ProfileCardProps = {
   profile: Profile;
   onOpen: (id: string) => void;
+  onEventAdded?: () => void;
 };
 
-const ProfileCard = ({ profile, onOpen }: ProfileCardProps) => {
+const ProfileCard = ({ profile, onOpen, onEventAdded }: ProfileCardProps) => {
   const [photoUrl, setPhotoUrl] = useState<string | undefined>();
+  const [snackbarMessage, setSnackbarMessage] = useState<string | null>(null);
   const { hidePhotos, hideScores } = usePrivacySettings();
 
   useEffect(() => {
@@ -75,6 +82,24 @@ const ProfileCard = ({ profile, onOpen }: ProfileCardProps) => {
     }
     return `обновлено: ${formatRelative(profile.updatedAt)}`;
   }, [profile.lastInteractionAt, profile.updatedAt]);
+
+  const followUpDays = useMemo(
+    () => daysSince(profile.lastInteractionAt ?? profile.updatedAt),
+    [profile.lastInteractionAt, profile.updatedAt],
+  );
+
+  const followUpLabel = useMemo(() => {
+    if (followUpDays === null || followUpDays < 7) {
+      return null;
+    }
+    if (followUpDays >= 30) {
+      return '30+ дней';
+    }
+    if (followUpDays >= 14) {
+      return '14+ дней';
+    }
+    return '7+ дней';
+  }, [followUpDays]);
 
   const attractiveness = useMemo(() => {
     if (!profile.attractiveness || profile.attractiveness <= 0) {
@@ -163,6 +188,18 @@ const ProfileCard = ({ profile, onOpen }: ProfileCardProps) => {
                   fontWeight: 600,
                 }}
               />
+              {followUpLabel ? (
+                <Chip
+                  label={followUpLabel}
+                  size="small"
+                  sx={{
+                    borderRadius: 999,
+                    bgcolor: '#F3E8FF',
+                    color: '#6B21A8',
+                    fontWeight: 600,
+                  }}
+                />
+              ) : null}
             </Stack>
             <Stack
               direction="row"
@@ -183,9 +220,83 @@ const ProfileCard = ({ profile, onOpen }: ProfileCardProps) => {
             <Typography variant="caption" color="text.secondary">
               {relativeLabel}
             </Typography>
+            <Stack direction="row" spacing={1}>
+              <IconButton
+                size="small"
+                aria-label="Сообщение"
+                onClick={async (event) => {
+                  event.stopPropagation();
+                  try {
+                    await addEvent(profile.id, {
+                      type: 'message',
+                      at: nowIso(),
+                      mood: '🙂',
+                      text: '',
+                    });
+                    onEventAdded?.();
+                    setSnackbarMessage('Событие добавлено');
+                  } catch (error) {
+                    console.error(error);
+                    setSnackbarMessage('Не удалось добавить событие');
+                  }
+                }}
+              >
+                <ChatBubbleOutlineIcon fontSize="small" />
+              </IconButton>
+              <IconButton
+                size="small"
+                aria-label="Звонок"
+                onClick={async (event) => {
+                  event.stopPropagation();
+                  try {
+                    await addEvent(profile.id, {
+                      type: 'call',
+                      at: nowIso(),
+                      mood: '🙂',
+                      text: '',
+                    });
+                    onEventAdded?.();
+                    setSnackbarMessage('Событие добавлено');
+                  } catch (error) {
+                    console.error(error);
+                    setSnackbarMessage('Не удалось добавить событие');
+                  }
+                }}
+              >
+                <CallIcon fontSize="small" />
+              </IconButton>
+              <IconButton
+                size="small"
+                aria-label="Свидание"
+                onClick={async (event) => {
+                  event.stopPropagation();
+                  try {
+                    await addEvent(profile.id, {
+                      type: 'date',
+                      at: nowIso(),
+                      mood: '🙂',
+                      text: '',
+                    });
+                    onEventAdded?.();
+                    setSnackbarMessage('Событие добавлено');
+                  } catch (error) {
+                    console.error(error);
+                    setSnackbarMessage('Не удалось добавить событие');
+                  }
+                }}
+              >
+                <EventIcon fontSize="small" />
+              </IconButton>
+            </Stack>
           </Stack>
         </Stack>
       </CardActionArea>
+      <Snackbar
+        open={Boolean(snackbarMessage)}
+        autoHideDuration={3000}
+        onClose={() => setSnackbarMessage(null)}
+        message={snackbarMessage ?? ''}
+      />
     </Card>
   );
 };

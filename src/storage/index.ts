@@ -52,6 +52,18 @@ export const nowIso = (): string => new Date().toISOString();
 const sortByIsoDesc = <T>(items: T[], getter: (item: T) => string) =>
   items.sort((a, b) => getter(b).localeCompare(getter(a)));
 
+const getMaxEventAt = (events: TimelineEvent[]): string | undefined => {
+  if (events.length === 0) {
+    return undefined;
+  }
+  return events.reduce((max, event) => {
+    if (!max) {
+      return event.at;
+    }
+    return event.at.localeCompare(max) > 0 ? event.at : max;
+  }, '');
+};
+
 const blobToBase64 = (blob: Blob): Promise<string> =>
   new Promise((resolve, reject) => {
     const reader = new FileReader();
@@ -249,7 +261,58 @@ export const addEvent = async (
 
 export const deleteEvent = async (eventId: string): Promise<void> => {
   const db = await dbPromise;
-  await db.delete('events', eventId);
+  const tx = db.transaction(['events', 'profiles'], 'readwrite');
+  const eventStore = tx.objectStore('events');
+  const event = await eventStore.get(eventId);
+  if (!event) {
+    await tx.done;
+    return;
+  }
+  await eventStore.delete(eventId);
+  const profileStore = tx.objectStore('profiles');
+  const profile = await profileStore.get(event.profileId);
+  if (profile) {
+    const isLatest =
+      profile.lastInteractionAt &&
+      event.at.localeCompare(profile.lastInteractionAt) === 0;
+    if (isLatest) {
+      const remainingEvents = await eventStore
+        .index('profileId')
+        .getAll(event.profileId);
+      const lastInteractionAt = getMaxEventAt(remainingEvents);
+      await profileStore.put({
+        ...profile,
+        lastInteractionAt,
+        updatedAt: nowIso(),
+      });
+    }
+  }
+  await tx.done;
+};
+
+export const recomputeLastInteraction = async (
+  profileId: string,
+): Promise<void> => {
+  const db = await dbPromise;
+  const tx = db.transaction(['events', 'profiles'], 'readwrite');
+  const profileStore = tx.objectStore('profiles');
+  const profile = await profileStore.get(profileId);
+  if (!profile) {
+    await tx.done;
+    return;
+  }
+  const events = await tx
+    .objectStore('events')
+    .index('profileId')
+    .getAll(profileId);
+  const lastInteractionAt = getMaxEventAt(events);
+  const shouldUpdate = profile.lastInteractionAt !== lastInteractionAt;
+  await profileStore.put({
+    ...profile,
+    lastInteractionAt,
+    updatedAt: shouldUpdate ? nowIso() : profile.updatedAt,
+  });
+  await tx.done;
 };
 
 export const exportData = async (): Promise<ExportDumpV1> => {
@@ -344,6 +407,30 @@ export const importData = async (
         await photosStore.put(photoRecord);
       }
     }
+
+    const allEvents = await eventsStore.getAll();
+    const lastInteractionByProfile = allEvents.reduce(
+      (acc, event) => {
+        const existing = acc[event.profileId];
+        if (!existing || event.at.localeCompare(existing) > 0) {
+          acc[event.profileId] = event.at;
+        }
+        return acc;
+      },
+      {} as Record<string, string>,
+    );
+    const allProfiles = await profilesStore.getAll();
+    await Promise.all(
+      allProfiles.map(async (profile) => {
+        const lastInteractionAt = lastInteractionByProfile[profile.id];
+        const shouldUpdate = profile.lastInteractionAt !== lastInteractionAt;
+        await profilesStore.put({
+          ...profile,
+          lastInteractionAt,
+          updatedAt: shouldUpdate ? nowIso() : profile.updatedAt,
+        });
+      }),
+    );
 
     await tx.done;
   } catch (error) {
