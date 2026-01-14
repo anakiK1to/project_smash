@@ -362,6 +362,7 @@ const CalendarScreen = () => {
           borderColor: 'divider',
           p: 1,
           minHeight: { xs: 76, sm: 92, md: 110 },
+          overflow: 'hidden',
           cursor: 'pointer',
           bgcolor: isCurrentMonth ? 'background.paper' : 'action.hover',
           display: 'flex',
@@ -372,6 +373,7 @@ const CalendarScreen = () => {
         <Typography
           variant="subtitle2"
           color={isCurrentMonth ? 'text.primary' : 'text.secondary'}
+          sx={{ lineHeight: 1.2, maxWidth: '100%' }}
         >
           {date.getDate()}
         </Typography>
