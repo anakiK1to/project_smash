@@ -501,9 +501,11 @@ const ProfileDetailScreen = () => {
           <Stack spacing={3}>
             <Box
               sx={{
-                borderRadius: 20,
+                borderRadius: 16,
                 overflow: 'hidden',
                 boxShadow: '0px 18px 40px rgba(15, 23, 42, 0.14)',
+                width: 'fit-content',
+                mx: 'auto',
               }}
             >
               <PhotoFrame
