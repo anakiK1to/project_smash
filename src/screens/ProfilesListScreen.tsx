@@ -1,6 +1,7 @@
 import {
   Box,
   Button,
+  Container,
   Fab,
   FormControl,
   InputLabel,
@@ -110,92 +111,94 @@ const ProfilesListScreen = () => {
 
   return (
     <Box sx={{ pb: 12 }}>
-      <Stack spacing={2} sx={{ mb: 3 }}>
-        <Typography variant="h5">Мои анкеты</Typography>
-        <Typography variant="body1" color="text.secondary">
-          Соберите карточки и возвращайтесь к ним в любое время.
-        </Typography>
-      </Stack>
+      <Container maxWidth="sm" sx={{ px: { xs: 2, sm: 3 }, py: 3 }}>
+        <Stack spacing={2} sx={{ mb: 3 }}>
+          <Typography variant="h5">Мои анкеты</Typography>
+          <Typography variant="body1" color="text.secondary">
+            Соберите карточки и возвращайтесь к ним в любое время.
+          </Typography>
+        </Stack>
 
-      <Stack spacing={2} sx={{ mb: 3 }}>
-        <TextField
-          label="Поиск"
-          value={query}
-          onChange={(event) => setQuery(event.target.value)}
-          fullWidth
-        />
-        <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
-          <FormControl fullWidth>
-            <InputLabel id="status-filter-label">Статус</InputLabel>
-            <Select
-              labelId="status-filter-label"
-              value={statusFilter}
-              label="Статус"
-              onChange={(event) =>
-                setStatusFilter(event.target.value as StatusFilter)
-              }
-            >
-              {statusOptions.map((status) => (
-                <MenuItem key={status} value={status}>
-                  {status}
-                </MenuItem>
-              ))}
-            </Select>
-          </FormControl>
-          <FormControl fullWidth>
-            <InputLabel id="sort-option-label">Сортировка</InputLabel>
-            <Select
-              labelId="sort-option-label"
-              value={sortOption}
-              label="Сортировка"
-              onChange={(event) =>
-                setSortOption(event.target.value as SortOption)
-              }
-            >
-              {sortOptions.map((option) => (
-                <MenuItem key={option.value} value={option.value}>
-                  {option.label}
-                </MenuItem>
-              ))}
-            </Select>
-          </FormControl>
+        <Stack spacing={2} sx={{ mb: 3 }}>
+          <TextField
+            label="Поиск"
+            value={query}
+            onChange={(event) => setQuery(event.target.value)}
+            fullWidth
+          />
+          <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
+            <FormControl fullWidth>
+              <InputLabel id="status-filter-label">Статус</InputLabel>
+              <Select
+                labelId="status-filter-label"
+                value={statusFilter}
+                label="Статус"
+                onChange={(event) =>
+                  setStatusFilter(event.target.value as StatusFilter)
+                }
+              >
+                {statusOptions.map((status) => (
+                  <MenuItem key={status} value={status}>
+                    {status}
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+            <FormControl fullWidth>
+              <InputLabel id="sort-option-label">Сортировка</InputLabel>
+              <Select
+                labelId="sort-option-label"
+                value={sortOption}
+                label="Сортировка"
+                onChange={(event) =>
+                  setSortOption(event.target.value as SortOption)
+                }
+              >
+                {sortOptions.map((option) => (
+                  <MenuItem key={option.value} value={option.value}>
+                    {option.label}
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+          </Stack>
         </Stack>
-      </Stack>
 
-      {loading ? (
-        <Stack spacing={2}>
-          {Array.from({ length: 3 }).map((_, index) => (
-            <Skeleton
-              key={`skeleton-${index}`}
-              variant="rounded"
-              height={124}
-            />
-          ))}
-        </Stack>
-      ) : filteredProfiles.length === 0 ? (
-        <Stack
-          spacing={2}
-          alignItems="center"
-          textAlign="center"
-          sx={{ py: 6 }}
-        >
-          <Typography variant="h3">🗂️</Typography>
-          <Typography variant="h6">Пока нет анкет</Typography>
-          <Button variant="contained" onClick={() => navigate('/new')}>
-            Создать первую
-          </Button>
-        </Stack>
-      ) : (
-        <Stack spacing={2}>
-          {filteredProfiles.map((profile) => (
-            <ProfileCard
-              key={profile.id}
-              profile={profile}
-              onOpen={(id) => navigate(`/p/${id}`)}
-            />
-          ))}
-        </Stack>
-      )}
+        {loading ? (
+          <Stack spacing={2}>
+            {Array.from({ length: 3 }).map((_, index) => (
+              <Skeleton
+                key={`skeleton-${index}`}
+                variant="rounded"
+                height={124}
+              />
+            ))}
+          </Stack>
+        ) : filteredProfiles.length === 0 ? (
+          <Stack
+            spacing={2}
+            alignItems="center"
+            textAlign="center"
+            sx={{ py: 6 }}
+          >
+            <Typography variant="h3">🗂️</Typography>
+            <Typography variant="h6">Пока нет анкет</Typography>
+            <Button variant="contained" onClick={() => navigate('/new')}>
+              Создать первую
+            </Button>
+          </Stack>
+        ) : (
+          <Stack spacing={2}>
+            {filteredProfiles.map((profile) => (
+              <ProfileCard
+                key={profile.id}
+                profile={profile}
+                onOpen={(id) => navigate(`/p/${id}`)}
+              />
+            ))}
+          </Stack>
+        )}
+      </Container>
 
       <Fab
         color="primary"
@@ -204,7 +207,7 @@ const ProfilesListScreen = () => {
         sx={{
           position: 'fixed',
           right: 24,
-          bottom: 24,
+          bottom: 'calc(env(safe-area-inset-bottom) + 88px)',
           boxShadow: 4,
         }}
         onClick={() => navigate('/new')}

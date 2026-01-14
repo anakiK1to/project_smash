@@ -351,3 +351,14 @@ export const importData = async (
     throw error;
   }
 };
+
+export const wipeAll = async (): Promise<void> => {
+  const db = await dbPromise;
+  const tx = db.transaction(['profiles', 'events', 'photos'], 'readwrite');
+  await Promise.all([
+    tx.objectStore('profiles').clear(),
+    tx.objectStore('events').clear(),
+    tx.objectStore('photos').clear(),
+  ]);
+  await tx.done;
+};

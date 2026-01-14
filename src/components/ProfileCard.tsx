@@ -13,6 +13,7 @@ import InstagramIcon from '@mui/icons-material/Instagram';
 import type { Profile, ProfileStatus } from '../domain/types';
 import { getPhoto } from '../storage';
 import { formatRelative } from '../utils/time';
+import { usePrivacySettings } from '../app/usePrivacySettings';
 
 const statusTones: Record<ProfileStatus, { bg: string; fg: string }> = {
   Новая: { bg: '#E3F2FD', fg: '#0D47A1' },
@@ -30,12 +31,17 @@ type ProfileCardProps = {
 
 const ProfileCard = ({ profile, onOpen }: ProfileCardProps) => {
   const [photoUrl, setPhotoUrl] = useState<string | undefined>();
+  const { hidePhotos, hideScores } = usePrivacySettings();
 
   useEffect(() => {
     let active = true;
     let url: string | undefined;
 
     const loadPhoto = async () => {
+      if (hidePhotos) {
+        setPhotoUrl(undefined);
+        return;
+      }
       const [photoId] = profile.photoIds;
       if (!photoId) {
         setPhotoUrl(undefined);
@@ -61,7 +67,7 @@ const ProfileCard = ({ profile, onOpen }: ProfileCardProps) => {
         URL.revokeObjectURL(url);
       }
     };
-  }, [profile.photoIds]);
+  }, [profile.photoIds, hidePhotos]);
 
   const relativeLabel = useMemo(() => {
     if (profile.lastInteractionAt) {
@@ -170,7 +176,7 @@ const ProfileCard = ({ profile, onOpen }: ProfileCardProps) => {
               {profile.contacts.instagram ? (
                 <InstagramIcon fontSize="small" color="secondary" />
               ) : null}
-              {attractiveness ? (
+              {attractiveness && !hideScores ? (
                 <Typography variant="body2">{attractiveness}</Typography>
               ) : null}
             </Stack>

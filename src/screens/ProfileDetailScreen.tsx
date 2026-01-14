@@ -75,6 +75,7 @@ import {
   fromDatetimeLocalValue,
   toDatetimeLocalValue,
 } from '../utils/date';
+import { usePrivacySettings } from '../app/usePrivacySettings';
 
 const statusTones: Record<ProfileStatus, { bg: string; fg: string }> = {
   Новая: { bg: '#E3F2FD', fg: '#0D47A1' },
@@ -99,15 +100,6 @@ const eventTypeLabels: Record<TimelineEventType, string> = {
   important: 'Важно',
 };
 
-const profileStatuses: ProfileStatus[] = [
-  'Новая',
-  'Общаемся',
-  '1 свидание',
-  'Регулярно',
-  'Остыли',
-  'Закрыто',
-];
-
 const TabPanel = ({
   value,
   index,
@@ -129,6 +121,7 @@ const TabPanel = ({
 const ProfileDetailScreen = () => {
   const navigate = useNavigate();
   const { id } = useParams();
+  const { hidePhotos, hideScores } = usePrivacySettings();
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loaded, setLoaded] = useState(false);
   const [events, setEvents] = useState<TimelineEvent[]>([]);
@@ -137,7 +130,6 @@ const ProfileDetailScreen = () => {
   const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
   const [eventDeleteId, setEventDeleteId] = useState<string | null>(null);
   const [eventDialogOpen, setEventDialogOpen] = useState(false);
-  const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [snackbarMessage, setSnackbarMessage] = useState<string | null>(null);
   const [photoUrls, setPhotoUrls] = useState<Array<{ id: string; url: string }>>(
     [],
@@ -149,10 +141,6 @@ const ProfileDetailScreen = () => {
     null,
   );
   const [vibeDraft, setVibeDraft] = useState<number | null>(null);
-  const [editName, setEditName] = useState('');
-  const [editStatus, setEditStatus] = useState<ProfileStatus>('Новая');
-  const [editTelegram, setEditTelegram] = useState('');
-  const [editInstagram, setEditInstagram] = useState('');
   const [eventType, setEventType] = useState<TimelineEventType>('message');
   const [eventAt, setEventAt] = useState('');
   const [eventMood, setEventMood] = useState('');
@@ -207,7 +195,7 @@ const ProfileDetailScreen = () => {
   }, [loadProfile, loadEvents]);
 
   useEffect(() => {
-    if (!profile?.photoIds.length) {
+    if (!profile?.photoIds.length || hidePhotos) {
       setPhotoUrls([]);
       return;
     }
@@ -239,7 +227,7 @@ const ProfileDetailScreen = () => {
       active = false;
       urls.forEach((url) => URL.revokeObjectURL(url));
     };
-  }, [profile?.photoIds]);
+  }, [profile?.photoIds, hidePhotos]);
 
   useEffect(() => {
     const profileId = profile?.id;
@@ -281,7 +269,7 @@ const ProfileDetailScreen = () => {
   const statusTone = profile ? statusTones[profile.status] : null;
 
   const ratingLabel = useMemo(() => {
-    if (!profile) {
+    if (!profile || hideScores) {
       return '';
     }
     const peachCount = Math.max(0, Math.round(profile.attractiveness ?? 0));
@@ -360,38 +348,6 @@ const ProfileDetailScreen = () => {
     }
   };
 
-  const handleOpenEdit = () => {
-    if (!profile) {
-      return;
-    }
-    setEditName(profile.name);
-    setEditStatus(profile.status);
-    setEditTelegram(profile.contacts.telegram ?? '');
-    setEditInstagram(profile.contacts.instagram ?? '');
-    setEditDialogOpen(true);
-  };
-
-  const handleSaveEdit = async () => {
-    if (!profile) {
-      return;
-    }
-    try {
-      const updated = await updateProfile(profile.id, {
-        name: editName.trim() || profile.name,
-        status: editStatus,
-        contacts: {
-          telegram: editTelegram.trim() || undefined,
-          instagram: editInstagram.trim() || undefined,
-        },
-      });
-      setProfile(updated);
-      setEditDialogOpen(false);
-    } catch (error) {
-      console.error(error);
-      setSnackbarMessage('Не удалось сохранить изменения');
-    }
-  };
-
   const handleMakeMainPhoto = async (photoId: string) => {
     if (!profile) {
       return;
@@ -411,7 +367,7 @@ const ProfileDetailScreen = () => {
     }
   };
 
-  const heroPhotoUrl = photoUrls[0]?.url;
+  const heroPhotoUrl = hidePhotos ? undefined : photoUrls[0]?.url;
 
   return (
     <Box sx={{ minHeight: '100vh', bgcolor: 'background.default' }}>
@@ -438,6 +394,17 @@ const ProfileDetailScreen = () => {
           >
             <MenuItem
               onClick={() => {
+                if (!profile) {
+                  return;
+                }
+                setMenuAnchor(null);
+                navigate(`/p/${profile.id}/edit`);
+              }}
+            >
+              Редактировать
+            </MenuItem>
+            <MenuItem
+              onClick={() => {
                 setMenuAnchor(null);
                 setConfirmDeleteOpen(true);
               }}
@@ -448,7 +415,7 @@ const ProfileDetailScreen = () => {
         </Toolbar>
       </AppBar>
 
-      <Container maxWidth="sm" sx={{ py: 3 }}>
+      <Container maxWidth="sm" sx={{ px: { xs: 2, sm: 3 }, py: 3 }}>
         {!loaded ? (
           <Stack spacing={2}>
             <Skeleton variant="rounded" height={200} />
@@ -512,7 +479,7 @@ const ProfileDetailScreen = () => {
                   <Stack alignItems="center" spacing={1}>
                     <InsertPhotoOutlinedIcon fontSize="large" />
                     <Typography color="text.secondary">
-                      Нет основного фото
+                      {hidePhotos ? 'Фото скрыты' : 'Нет основного фото'}
                     </Typography>
                   </Stack>
                 )}
@@ -577,7 +544,7 @@ const ProfileDetailScreen = () => {
                 variant="text"
                 startIcon={<EditOutlinedIcon />}
                 sx={{ borderRadius: 999, textTransform: 'none' }}
-                onClick={handleOpenEdit}
+                onClick={() => profile && navigate(`/p/${profile.id}/edit`)}
               >
                 Редактировать
               </Button>
@@ -707,30 +674,54 @@ const ProfileDetailScreen = () => {
                     value={instagramDraft}
                     onChange={(event) => setInstagramDraft(event.target.value)}
                   />
-                  <Stack spacing={1}>
+                  {!hideScores ? (
+                    <>
+                      <Stack spacing={1}>
+                        <Typography variant="body2" color="text.secondary">
+                          Привлекательность
+                        </Typography>
+                        <Rating
+                          value={attractivenessDraft}
+                          max={5}
+                          icon={
+                            <span role="img" aria-label="attractiveness">
+                              🍑
+                            </span>
+                          }
+                          emptyIcon={
+                            <span role="img" aria-label="attractiveness">
+                              🍑
+                            </span>
+                          }
+                          onChange={(_, value) => setAttractivenessDraft(value)}
+                        />
+                      </Stack>
+                      <Stack spacing={1}>
+                        <Typography variant="body2" color="text.secondary">
+                          Вайб
+                        </Typography>
+                        <Rating
+                          value={vibeDraft}
+                          max={5}
+                          icon={
+                            <span role="img" aria-label="vibe">
+                              ✨
+                            </span>
+                          }
+                          emptyIcon={
+                            <span role="img" aria-label="vibe">
+                              ✨
+                            </span>
+                          }
+                          onChange={(_, value) => setVibeDraft(value)}
+                        />
+                      </Stack>
+                    </>
+                  ) : (
                     <Typography variant="body2" color="text.secondary">
-                      Привлекательность
+                      Оценки скрыты паник-режимом.
                     </Typography>
-                    <Rating
-                      value={attractivenessDraft}
-                      max={5}
-                      icon={<span role="img" aria-label="attractiveness">🍑</span>}
-                      emptyIcon={<span role="img" aria-label="attractiveness">🍑</span>}
-                      onChange={(_, value) => setAttractivenessDraft(value)}
-                    />
-                  </Stack>
-                  <Stack spacing={1}>
-                    <Typography variant="body2" color="text.secondary">
-                      Вайб
-                    </Typography>
-                    <Rating
-                      value={vibeDraft}
-                      max={5}
-                      icon={<span role="img" aria-label="vibe">✨</span>}
-                      emptyIcon={<span role="img" aria-label="vibe">✨</span>}
-                      onChange={(_, value) => setVibeDraft(value)}
-                    />
-                  </Stack>
+                  )}
                 </Stack>
               </Stack>
             </TabPanel>
@@ -745,7 +736,15 @@ const ProfileDetailScreen = () => {
                 >
                   Добавить фото
                 </Button>
-                {photoUrls.length === 0 ? (
+                {hidePhotos ? (
+                  <Card variant="outlined" sx={{ borderRadius: 4 }}>
+                    <CardContent>
+                      <Typography color="text.secondary">
+                        Фото скрыты паник-режимом.
+                      </Typography>
+                    </CardContent>
+                  </Card>
+                ) : photoUrls.length === 0 ? (
                   <Card variant="outlined" sx={{ borderRadius: 4 }}>
                     <CardContent>
                       <Typography color="text.secondary">
@@ -794,6 +793,7 @@ const ProfileDetailScreen = () => {
                           <IconButton
                             size="small"
                             sx={{ bgcolor: 'rgba(255,255,255,0.9)' }}
+                            aria-label="Сделать главным"
                             onClick={() => handleMakeMainPhoto(photo.id)}
                           >
                             <StarIcon fontSize="small" />
@@ -801,6 +801,7 @@ const ProfileDetailScreen = () => {
                           <IconButton
                             size="small"
                             sx={{ bgcolor: 'rgba(255,255,255,0.9)' }}
+                            aria-label="Удалить фото"
                             onClick={async () => {
                               try {
                                 await removePhoto(profile.id, photo.id);
@@ -887,52 +888,6 @@ const ProfileDetailScreen = () => {
           <Button onClick={() => setEventDialogOpen(false)}>Отмена</Button>
           <Button variant="contained" onClick={handleAddEventSubmit}>
             Добавить
-          </Button>
-        </DialogActions>
-      </Dialog>
-
-      <Dialog open={editDialogOpen} onClose={() => setEditDialogOpen(false)}>
-        <DialogTitle>Редактировать анкету</DialogTitle>
-        <DialogContent sx={{ pt: 1 }}>
-          <Stack spacing={2} sx={{ mt: 1, minWidth: { xs: '280px', sm: '360px' } }}>
-            <TextField
-              label="Имя"
-              value={editName}
-              onChange={(event) => setEditName(event.target.value)}
-            />
-            <FormControl fullWidth>
-              <InputLabel id="status-label">Статус</InputLabel>
-              <Select
-                labelId="status-label"
-                label="Статус"
-                value={editStatus}
-                onChange={(event) =>
-                  setEditStatus(event.target.value as ProfileStatus)
-                }
-              >
-                {profileStatuses.map((status) => (
-                  <MenuItem key={status} value={status}>
-                    {status}
-                  </MenuItem>
-                ))}
-              </Select>
-            </FormControl>
-            <TextField
-              label="Telegram"
-              value={editTelegram}
-              onChange={(event) => setEditTelegram(event.target.value)}
-            />
-            <TextField
-              label="Instagram"
-              value={editInstagram}
-              onChange={(event) => setEditInstagram(event.target.value)}
-            />
-          </Stack>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setEditDialogOpen(false)}>Отмена</Button>
-          <Button variant="contained" onClick={handleSaveEdit}>
-            Сохранить
           </Button>
         </DialogActions>
       </Dialog>
