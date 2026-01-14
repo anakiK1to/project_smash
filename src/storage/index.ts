@@ -225,6 +225,18 @@ export const listEvents = async (
   return sortByIsoDesc(events, (event) => event.at);
 };
 
+export const listEventsRange = async (
+  fromIso: string,
+  toIso: string,
+): Promise<TimelineEvent[]> => {
+  const db = await dbPromise;
+  const events = await db.getAll('events');
+  // Inclusive range: fromIso <= at <= toIso (ISO strings compare lexicographically).
+  return events
+    .filter((event) => event.at >= fromIso && event.at <= toIso)
+    .sort((a, b) => a.at.localeCompare(b.at));
+};
+
 export const addEvent = async (
   profileId: string,
   input: Pick<TimelineEvent, 'type' | 'at' | 'mood' | 'text'>,
@@ -257,6 +269,54 @@ export const addEvent = async (
   });
   await tx.done;
   return event;
+};
+
+export const updateEvent = async (
+  eventId: string,
+  patch: Partial<
+    Pick<TimelineEvent, 'profileId' | 'type' | 'at' | 'mood' | 'text'>
+  >,
+): Promise<TimelineEvent> => {
+  const db = await dbPromise;
+  const tx = db.transaction(['events', 'profiles'], 'readwrite');
+  const eventStore = tx.objectStore('events');
+  const existing = await eventStore.get(eventId);
+  if (!existing) {
+    throw new Error('Event not found');
+  }
+  const updated: TimelineEvent = {
+    ...existing,
+    ...patch,
+    id: existing.id,
+    createdAt: existing.createdAt,
+  };
+  await eventStore.put(updated);
+
+  const profileStore = tx.objectStore('profiles');
+  const recomputeProfile = async (profileId: string) => {
+    const profile = await profileStore.get(profileId);
+    if (!profile) {
+      return;
+    }
+    const events = await eventStore.index('profileId').getAll(profileId);
+    const lastInteractionAt = getMaxEventAt(events);
+    const shouldUpdate = profile.lastInteractionAt !== lastInteractionAt;
+    await profileStore.put({
+      ...profile,
+      lastInteractionAt,
+      updatedAt: shouldUpdate ? nowIso() : profile.updatedAt,
+    });
+  };
+
+  if (existing.profileId !== updated.profileId) {
+    await recomputeProfile(existing.profileId);
+    await recomputeProfile(updated.profileId);
+  } else {
+    await recomputeProfile(updated.profileId);
+  }
+
+  await tx.done;
+  return updated;
 };
 
 export const deleteEvent = async (eventId: string): Promise<void> => {

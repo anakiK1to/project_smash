@@ -4,6 +4,7 @@ import ProfileDetailScreen from '../screens/ProfileDetailScreen';
 import ProfileEditorScreen from '../screens/ProfileEditorScreen';
 import ProfilesSplitViewScreen from '../screens/ProfilesSplitViewScreen';
 import SettingsScreen from '../screens/SettingsScreen';
+import CalendarScreen from '../screens/CalendarScreen';
 
 const AppRouter = () => {
   return (
@@ -14,6 +15,7 @@ const AppRouter = () => {
         </Route>
         <Route path="/new" element={<ProfileEditorScreen />} />
         <Route path="/p/:id/edit" element={<ProfileEditorScreen />} />
+        <Route path="/calendar" element={<CalendarScreen />} />
         <Route path="/settings" element={<SettingsScreen />} />
       </Route>
       <Route path="*" element={<Navigate to="/" replace />} />
