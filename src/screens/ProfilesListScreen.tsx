@@ -1,6 +1,8 @@
 import {
   Box,
   Button,
+  Card,
+  CardActionArea,
   Container,
   Fab,
   FormControl,
@@ -9,6 +11,7 @@ import {
   Select,
   Skeleton,
   Stack,
+  Switch,
   TextField,
   Typography,
   useMediaQuery,
@@ -20,10 +23,15 @@ import { useTheme } from '@mui/material/styles';
 import type { Profile, ProfileStatus } from '../domain/types';
 import { listProfiles } from '../storage';
 import ProfileCard from '../components/ProfileCard';
+import { daysSince } from '../utils/time';
 
 type StatusFilter = 'Все' | ProfileStatus;
 
-type SortOption = 'updatedDesc' | 'updatedAsc' | 'attractivenessDesc';
+type SortOption =
+  | 'updatedDesc'
+  | 'updatedAsc'
+  | 'attractivenessDesc'
+  | 'followUpDesc';
 
 const statusOptions: StatusFilter[] = [
   'Все',
@@ -38,6 +46,7 @@ const statusOptions: StatusFilter[] = [
 const sortOptions: Array<{ value: SortOption; label: string }> = [
   { value: 'updatedDesc', label: 'Недавно обновлялись' },
   { value: 'updatedAsc', label: 'Давно обновлялись' },
+  { value: 'followUpDesc', label: 'Сначала давно без контакта' },
   { value: 'attractivenessDesc', label: 'По привлекательности' },
 ];
 
@@ -50,21 +59,33 @@ const ProfilesListScreen = () => {
   const [query, setQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('Все');
   const [sortOption, setSortOption] = useState<SortOption>('updatedDesc');
+  const [followUpOnly, setFollowUpOnly] = useState(false);
 
   useEffect(() => {
     let active = true;
-    const loadProfiles = async () => {
+    const load = async () => {
       const data = await listProfiles();
       if (active) {
         setProfiles(data);
         setLoading(false);
       }
     };
-    loadProfiles();
+    load();
     return () => {
       active = false;
     };
   }, []);
+
+  const totalCount = profiles.length;
+  const activeCount = profiles.filter((profile) => profile.status !== 'Закрыто')
+    .length;
+  const followUpCount = profiles.filter((profile) => {
+    if (profile.status === 'Закрыто') {
+      return false;
+    }
+    const days = daysSince(profile.lastInteractionAt ?? profile.updatedAt);
+    return days !== null && days >= 7;
+  }).length;
 
   const filteredProfiles = useMemo(() => {
     const normalizedQuery = query.trim().toLowerCase();
@@ -88,10 +109,34 @@ const ProfilesListScreen = () => {
     const matchesStatus = (profile: Profile) =>
       statusFilter === 'Все' ? true : profile.status === statusFilter;
 
+    const matchesFollowUp = (profile: Profile) => {
+      if (!followUpOnly) {
+        return true;
+      }
+      if (profile.status === 'Закрыто') {
+        return false;
+      }
+      const days = daysSince(profile.lastInteractionAt ?? profile.updatedAt);
+      return days !== null && days >= 7;
+    };
+
     const sorted = profiles
-      .filter((profile) => matchesQuery(profile) && matchesStatus(profile))
+      .filter(
+        (profile) =>
+          matchesQuery(profile) &&
+          matchesStatus(profile) &&
+          matchesFollowUp(profile),
+      )
       .slice()
       .sort((a, b) => {
+        if (sortOption === 'followUpDesc') {
+          const aDays = daysSince(a.lastInteractionAt ?? a.updatedAt) ?? 0;
+          const bDays = daysSince(b.lastInteractionAt ?? b.updatedAt) ?? 0;
+          if (aDays !== bDays) {
+            return bDays - aDays;
+          }
+          return b.updatedAt.localeCompare(a.updatedAt);
+        }
         if (sortOption === 'updatedDesc') {
           return b.updatedAt.localeCompare(a.updatedAt);
         }
@@ -107,7 +152,7 @@ const ProfilesListScreen = () => {
       });
 
     return sorted;
-  }, [profiles, query, statusFilter, sortOption]);
+  }, [profiles, query, statusFilter, sortOption, followUpOnly]);
 
   return (
     <Box sx={{ pb: 12 }}>
@@ -119,6 +164,44 @@ const ProfilesListScreen = () => {
           </Typography>
         </Stack>
 
+        <Card variant="outlined" sx={{ mb: 3, borderRadius: 3 }}>
+          <CardActionArea
+            onClick={() => {
+              setFollowUpOnly(true);
+              setSortOption('followUpDesc');
+            }}
+            sx={{ p: 2 }}
+          >
+            <Stack
+              direction="row"
+              spacing={2}
+              justifyContent="space-between"
+              alignItems="center"
+            >
+              <Stack spacing={0.5}>
+                <Typography variant="caption" color="text.secondary">
+                  Всего
+                </Typography>
+                <Typography variant="h6">{totalCount}</Typography>
+              </Stack>
+              <Stack spacing={0.5}>
+                <Typography variant="caption" color="text.secondary">
+                  Активные
+                </Typography>
+                <Typography variant="h6">{activeCount}</Typography>
+              </Stack>
+              <Stack spacing={0.5}>
+                <Typography variant="caption" color="text.secondary">
+                  Нужны follow-up
+                </Typography>
+                <Typography variant="h6" color="primary">
+                  {followUpCount}
+                </Typography>
+              </Stack>
+            </Stack>
+          </CardActionArea>
+        </Card>
+
         <Stack spacing={2} sx={{ mb: 3 }}>
           <TextField
             label="Поиск"
@@ -126,6 +209,16 @@ const ProfilesListScreen = () => {
             onChange={(event) => setQuery(event.target.value)}
             fullWidth
           />
+          <Stack direction="row" spacing={2} alignItems="center">
+            <Typography variant="body2" color="text.secondary">
+              Нужны follow-up
+            </Typography>
+            <Switch
+              checked={followUpOnly}
+              onChange={(event) => setFollowUpOnly(event.target.checked)}
+              inputProps={{ 'aria-label': 'Нужны follow-up' }}
+            />
+          </Stack>
           <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
             <FormControl fullWidth>
               <InputLabel id="status-filter-label">Статус</InputLabel>
@@ -194,6 +287,10 @@ const ProfilesListScreen = () => {
                 key={profile.id}
                 profile={profile}
                 onOpen={(id) => navigate(`/p/${id}`)}
+                onEventAdded={async () => {
+                  const data = await listProfiles();
+                  setProfiles(data);
+                }}
               />
             ))}
           </Stack>

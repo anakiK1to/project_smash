@@ -67,11 +67,13 @@ import {
   getPhoto,
   getProfile,
   listEvents,
+  nowIso,
   removePhoto,
   updateProfile,
 } from '../storage';
 import {
-  formatDateTime,
+  formatDayHeader,
+  formatTime,
   fromDatetimeLocalValue,
   toDatetimeLocalValue,
 } from '../utils/date';
@@ -91,6 +93,13 @@ const eventTypeIcons: Record<TimelineEventType, JSX.Element> = {
   call: <CallIcon fontSize="small" />,
   date: <EventIcon fontSize="small" />,
   important: <StarIcon fontSize="small" />,
+};
+
+const eventTypeTones: Record<TimelineEventType, { bg: string; fg: string }> = {
+  message: { bg: '#E3F2FD', fg: '#1565C0' },
+  call: { bg: '#E8F5E9', fg: '#2E7D32' },
+  date: { bg: '#FFF3E0', fg: '#EF6C00' },
+  important: { bg: '#F3E5F5', fg: '#6A1B9A' },
 };
 
 const eventTypeLabels: Record<TimelineEventType, string> = {
@@ -277,7 +286,22 @@ const ProfileDetailScreen = () => {
     const peachLabel = peachCount ? '🍑'.repeat(peachCount) : '';
     const vibeLabel = vibeCount ? '✨'.repeat(vibeCount) : '';
     return [peachLabel, vibeLabel].filter(Boolean).join(' ');
-  }, [profile]);
+  }, [profile, hideScores]);
+
+  const groupedEvents = useMemo(() => {
+    const groups: Array<{ header: string; items: TimelineEvent[] }> = [];
+    let currentKey = '';
+    events.forEach((event) => {
+      const date = new Date(event.at);
+      const key = Number.isNaN(date.getTime()) ? event.at : date.toDateString();
+      if (key !== currentKey) {
+        currentKey = key;
+        groups.push({ header: formatDayHeader(event.at), items: [] });
+      }
+      groups[groups.length - 1].items.push(event);
+    });
+    return groups;
+  }, [events]);
 
   const handleAddPhotos = async (files: FileList | null) => {
     if (!profile || !files || files.length === 0) {
@@ -316,6 +340,7 @@ const ProfileDetailScreen = () => {
     try {
       await deleteEvent(eventDeleteId);
       await loadEvents();
+      await loadProfile();
     } catch (error) {
       console.error(error);
       setSnackbarMessage('Не удалось удалить событие');
@@ -342,6 +367,26 @@ const ProfileDetailScreen = () => {
       setEventText('');
       setEventType('message');
       setEventAt('');
+    } catch (error) {
+      console.error(error);
+      setSnackbarMessage('Не удалось добавить событие');
+    }
+  };
+
+  const handleQuickEvent = async (type: TimelineEventType) => {
+    if (!profile) {
+      return;
+    }
+    try {
+      await addEvent(profile.id, {
+        type,
+        at: nowIso(),
+        mood: '🙂',
+        text: '',
+      });
+      await loadEvents();
+      await loadProfile();
+      setSnackbarMessage('Событие добавлено');
     } catch (error) {
       console.error(error);
       setSnackbarMessage('Не удалось добавить событие');
@@ -521,6 +566,38 @@ const ProfileDetailScreen = () => {
               spacing={1.5}
               alignItems="stretch"
             >
+              <Stack
+                direction="row"
+                spacing={1}
+                alignItems="center"
+                flexWrap="wrap"
+                useFlexGap
+              >
+                <Button
+                  variant="outlined"
+                  startIcon={<ChatBubbleOutlineIcon />}
+                  sx={{ borderRadius: 999, textTransform: 'none' }}
+                  onClick={() => handleQuickEvent('message')}
+                >
+                  Сообщение
+                </Button>
+                <Button
+                  variant="outlined"
+                  startIcon={<CallIcon />}
+                  sx={{ borderRadius: 999, textTransform: 'none' }}
+                  onClick={() => handleQuickEvent('call')}
+                >
+                  Звонок
+                </Button>
+                <Button
+                  variant="outlined"
+                  startIcon={<EventIcon />}
+                  sx={{ borderRadius: 999, textTransform: 'none' }}
+                  onClick={() => handleQuickEvent('date')}
+                >
+                  Свидание
+                </Button>
+              </Stack>
               <Button
                 variant="contained"
                 startIcon={<AddIcon />}
@@ -583,59 +660,75 @@ const ProfileDetailScreen = () => {
                   </Card>
                 ) : (
                   <List sx={{ p: 0 }}>
-                    {events.map((event, index) => (
-                      <Box key={event.id}>
-                        <ListItem
-                          alignItems="flex-start"
-                          secondaryAction={
-                            <IconButton
-                              edge="end"
-                              onClick={() => setEventDeleteId(event.id)}
-                            >
-                              <DeleteOutlineIcon />
-                            </IconButton>
-                          }
+                    {groupedEvents.map((group, groupIndex) => (
+                      <Box key={`${group.header}-${groupIndex}`}>
+                        <Typography
+                          variant="overline"
+                          color="text.secondary"
+                          sx={{ display: 'block', mb: 1, mt: groupIndex === 0 ? 0 : 2 }}
                         >
-                          <ListItemAvatar>
-                            <Avatar
-                              sx={{
-                                bgcolor: 'primary.light',
-                                color: 'primary.contrastText',
-                              }}
-                            >
-                              {eventTypeIcons[event.type]}
-                            </Avatar>
-                          </ListItemAvatar>
-                          <ListItemText
-                            primary={
-                              <Stack
-                                direction="row"
-                                spacing={1}
-                                alignItems="center"
+                          {group.header}
+                        </Typography>
+                        {group.items.map((event, index) => {
+                          const tone = eventTypeTones[event.type];
+                          return (
+                            <Box key={event.id}>
+                              <ListItem
+                                alignItems="flex-start"
+                                secondaryAction={
+                                  <IconButton
+                                    edge="end"
+                                    onClick={() => setEventDeleteId(event.id)}
+                                  >
+                                    <DeleteOutlineIcon />
+                                  </IconButton>
+                                }
                               >
-                                <Typography fontWeight={600}>
-                                  {eventTypeLabels[event.type]}
-                                </Typography>
-                                {event.mood ? (
-                                  <Typography variant="body2">
-                                    {event.mood}
-                                  </Typography>
-                                ) : null}
-                              </Stack>
-                            }
-                            secondary={
-                              <Stack spacing={0.5}>
-                                <Typography variant="body2" color="text.secondary">
-                                  {formatDateTime(event.at)}
-                                </Typography>
-                                {event.text ? (
-                                  <Typography variant="body2">{event.text}</Typography>
-                                ) : null}
-                              </Stack>
-                            }
-                          />
-                        </ListItem>
-                        {index < events.length - 1 ? <Divider /> : null}
+                                <ListItemAvatar>
+                                  <Avatar
+                                    sx={{
+                                      bgcolor: tone.bg,
+                                      color: tone.fg,
+                                    }}
+                                  >
+                                    {eventTypeIcons[event.type]}
+                                  </Avatar>
+                                </ListItemAvatar>
+                                <ListItemText
+                                  primary={
+                                    <Stack
+                                      direction="row"
+                                      spacing={1}
+                                      alignItems="center"
+                                    >
+                                      <Typography fontWeight={600}>
+                                        {eventTypeLabels[event.type]}
+                                      </Typography>
+                                      {event.mood ? (
+                                        <Typography variant="body2">
+                                          {event.mood}
+                                        </Typography>
+                                      ) : null}
+                                    </Stack>
+                                  }
+                                  secondary={
+                                    <Stack spacing={0.5}>
+                                      <Typography variant="body2" color="text.secondary">
+                                        {formatTime(event.at)}
+                                      </Typography>
+                                      {event.text ? (
+                                        <Typography variant="body2">
+                                          {event.text}
+                                        </Typography>
+                                      ) : null}
+                                    </Stack>
+                                  }
+                                />
+                              </ListItem>
+                              {index < group.items.length - 1 ? <Divider /> : null}
+                            </Box>
+                          );
+                        })}
                       </Box>
                     ))}
                   </List>
