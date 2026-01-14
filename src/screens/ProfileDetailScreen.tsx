@@ -31,6 +31,7 @@ import {
   TextField,
   Toolbar,
   Typography,
+  useMediaQuery,
 } from '@mui/material';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import MoreVertIcon from '@mui/icons-material/MoreVert';
@@ -53,6 +54,7 @@ import {
   type ReactNode,
 } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
+import { useTheme } from '@mui/material/styles';
 import type {
   Profile,
   ProfileStatus,
@@ -130,6 +132,8 @@ const TabPanel = ({
 const ProfileDetailScreen = () => {
   const navigate = useNavigate();
   const { id } = useParams();
+  const theme = useTheme();
+  const isDesktop = useMediaQuery(theme.breakpoints.up('md'));
   const { hidePhotos, hideScores } = usePrivacySettings();
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loaded, setLoaded] = useState(false);
@@ -423,9 +427,11 @@ const ProfileDetailScreen = () => {
         sx={{ backdropFilter: 'blur(12px)', bgcolor: 'rgba(255,255,255,0.9)' }}
       >
         <Toolbar sx={{ px: { xs: 1, sm: 2 } }}>
-          <IconButton onClick={() => navigate(-1)} edge="start">
-            <ArrowBackIcon />
-          </IconButton>
+          {!isDesktop ? (
+            <IconButton onClick={() => navigate(-1)} edge="start">
+              <ArrowBackIcon />
+            </IconButton>
+          ) : null}
           <Typography variant="h6" sx={{ flex: 1, fontWeight: 700 }}>
             {profile?.name ?? 'Анкета'}
           </Typography>
@@ -460,7 +466,10 @@ const ProfileDetailScreen = () => {
         </Toolbar>
       </AppBar>
 
-      <Container maxWidth="sm" sx={{ px: { xs: 2, sm: 3 }, py: 3 }}>
+      <Container
+        maxWidth={isDesktop ? 'md' : 'sm'}
+        sx={{ px: { xs: 2, sm: 3, md: 4 }, py: { xs: 3, md: 4 } }}
+      >
         {!loaded ? (
           <Stack spacing={2}>
             <Skeleton variant="rounded" height={200} />
@@ -495,7 +504,7 @@ const ProfileDetailScreen = () => {
             >
               <Box
                 sx={{
-                  aspectRatio: '16 / 9',
+                  aspectRatio: { xs: '16 / 9', md: '21 / 9' },
                   width: '100%',
                   display: 'flex',
                   alignItems: 'center',

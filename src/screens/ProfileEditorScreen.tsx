@@ -16,6 +16,7 @@ import {
   TextField,
   Toolbar,
   Typography,
+  useMediaQuery,
 } from '@mui/material';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import SaveOutlinedIcon from '@mui/icons-material/SaveOutlined';
@@ -25,6 +26,7 @@ import CloseRoundedIcon from '@mui/icons-material/CloseRounded';
 import InsertPhotoOutlinedIcon from '@mui/icons-material/InsertPhotoOutlined';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
+import { useTheme } from '@mui/material/styles';
 import type { Profile, ProfileStatus } from '../domain/types';
 import {
   addPhoto,
@@ -49,6 +51,8 @@ const ProfileEditorScreen = () => {
   const navigate = useNavigate();
   const { id } = useParams();
   const isEditMode = Boolean(id);
+  const theme = useTheme();
+  const isDesktop = useMediaQuery(theme.breakpoints.up('md'));
   const { hidePhotos, hideScores } = usePrivacySettings();
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
@@ -246,7 +250,10 @@ const ProfileEditorScreen = () => {
         </Toolbar>
       </AppBar>
 
-      <Container maxWidth="sm" sx={{ px: { xs: 2, sm: 3 }, py: 3 }}>
+      <Container
+        maxWidth={isDesktop ? 'md' : 'sm'}
+        sx={{ px: { xs: 2, sm: 3, md: 4 }, py: { xs: 3, md: 4 } }}
+      >
         {loading ? (
           <Typography color="text.secondary">Загрузка...</Typography>
         ) : null}
@@ -261,42 +268,59 @@ const ProfileEditorScreen = () => {
         ) : null}
 
         {!loading && (!isEditMode || profile) ? (
-          <Stack spacing={3}>
-            <Card sx={{ borderRadius: 4 }}>
-              <CardContent>
-                <Stack spacing={2.5}>
-                  <Typography variant="subtitle1" fontWeight={700}>
-                    Основное
-                  </Typography>
-                  <TextField
-                    label="Имя"
-                    value={name}
-                    onChange={(event) => setName(event.target.value)}
-                    onBlur={() => setNameTouched(true)}
-                    error={nameError}
-                    helperText={
-                      nameError ? 'Минимум 2 символа' : ' '
-                    }
-                    fullWidth
-                  />
-                  <FormControl fullWidth>
-                    <InputLabel id="status-label">Статус</InputLabel>
-                    <Select
-                      labelId="status-label"
-                      label="Статус"
-                      value={status}
-                      onChange={(event) =>
-                        setStatus(event.target.value as ProfileStatus)
-                      }
-                    >
-                      {profileStatuses.map((value) => (
-                        <MenuItem key={value} value={value}>
-                          {value}
-                        </MenuItem>
-                      ))}
-                    </Select>
-                  </FormControl>
+          <Box
+            sx={{
+              display: 'grid',
+              gap: 3,
+              gridTemplateColumns: {
+                xs: '1fr',
+                md: 'repeat(2, minmax(0, 1fr))',
+              },
+            }}
+          >
+            <Stack spacing={3}>
+              <Card sx={{ borderRadius: 4 }}>
+                <CardContent>
+                  <Stack spacing={2.5}>
+                    <Typography variant="subtitle1" fontWeight={700}>
+                      Основное
+                    </Typography>
+                    <TextField
+                      label="Имя"
+                      value={name}
+                      onChange={(event) => setName(event.target.value)}
+                      onBlur={() => setNameTouched(true)}
+                      error={nameError}
+                      helperText={nameError ? 'Минимум 2 символа' : ' '}
+                      fullWidth
+                    />
+                    <FormControl fullWidth>
+                      <InputLabel id="status-label">Статус</InputLabel>
+                      <Select
+                        labelId="status-label"
+                        label="Статус"
+                        value={status}
+                        onChange={(event) =>
+                          setStatus(event.target.value as ProfileStatus)
+                        }
+                      >
+                        {profileStatuses.map((value) => (
+                          <MenuItem key={value} value={value}>
+                            {value}
+                          </MenuItem>
+                        ))}
+                      </Select>
+                    </FormControl>
+                  </Stack>
+                </CardContent>
+              </Card>
+
+              <Card sx={{ borderRadius: 4 }}>
+                <CardContent>
                   <Stack spacing={2}>
+                    <Typography variant="subtitle1" fontWeight={700}>
+                      Контакты
+                    </Typography>
                     <TextField
                       label="Telegram"
                       value={telegram}
@@ -310,196 +334,204 @@ const ProfileEditorScreen = () => {
                       fullWidth
                     />
                   </Stack>
-                </Stack>
-              </CardContent>
-            </Card>
+                </CardContent>
+              </Card>
+            </Stack>
 
-            {!hideScores ? (
+            <Stack spacing={3}>
               <Card sx={{ borderRadius: 4 }}>
                 <CardContent>
                   <Stack spacing={2}>
                     <Typography variant="subtitle1" fontWeight={700}>
                       Оценки
                     </Typography>
-                    <Stack spacing={1}>
+                    {!hideScores ? (
+                      <>
+                        <Stack spacing={1}>
+                          <Typography variant="body2" color="text.secondary">
+                            🍑 Привлекательность
+                          </Typography>
+                          <Rating
+                            value={attractiveness}
+                            max={5}
+                            onChange={(_, value) => setAttractiveness(value)}
+                          />
+                        </Stack>
+                        <Stack spacing={1}>
+                          <Typography variant="body2" color="text.secondary">
+                            ✨ Вайб
+                          </Typography>
+                          <Rating
+                            value={vibe}
+                            max={5}
+                            onChange={(_, value) => setVibe(value)}
+                          />
+                        </Stack>
+                      </>
+                    ) : (
                       <Typography variant="body2" color="text.secondary">
-                        🍑 Привлекательность
+                        {notesHelper}
                       </Typography>
-                      <Rating
-                        value={attractiveness}
-                        max={5}
-                        onChange={(_, value) => setAttractiveness(value)}
-                      />
-                    </Stack>
-                    <Stack spacing={1}>
-                      <Typography variant="body2" color="text.secondary">
-                        ✨ Вайб
-                      </Typography>
-                      <Rating
-                        value={vibe}
-                        max={5}
-                        onChange={(_, value) => setVibe(value)}
-                      />
-                    </Stack>
+                    )}
                   </Stack>
                 </CardContent>
               </Card>
-            ) : (
-              <Typography variant="body2" color="text.secondary">
-                {notesHelper}
-              </Typography>
-            )}
 
-            <Card sx={{ borderRadius: 4 }}>
-              <CardContent>
-                <Stack spacing={2}>
-                  <Typography variant="subtitle1" fontWeight={700}>
-                    Заметки
-                  </Typography>
-                  <TextField
-                    label="Заметки"
-                    multiline
-                    minRows={4}
-                    value={notes}
-                    onChange={(event) => setNotes(event.target.value)}
-                    fullWidth
-                  />
-                </Stack>
-              </CardContent>
-            </Card>
-
-            <Card sx={{ borderRadius: 4 }}>
-              <CardContent>
-                <Stack spacing={2}>
-                  <Stack
-                    direction="row"
-                    alignItems="center"
-                    justifyContent="space-between"
-                  >
+              <Card sx={{ borderRadius: 4 }}>
+                <CardContent>
+                  <Stack spacing={2}>
                     <Typography variant="subtitle1" fontWeight={700}>
-                      Фото
+                      Заметки
                     </Typography>
-                    <Button
-                      variant="contained"
-                      startIcon={<AddPhotoAlternateOutlinedIcon />}
-                      onClick={() => {
-                        if (!profile) {
-                          setSnackbarMessage('Сначала создайте анкету');
-                          return;
-                        }
-                        fileInputRef.current?.click();
-                      }}
-                      sx={{ borderRadius: 999, textTransform: 'none' }}
-                    >
-                      Добавить фото
-                    </Button>
+                    <TextField
+                      label="Заметки"
+                      multiline
+                      minRows={4}
+                      value={notes}
+                      onChange={(event) => setNotes(event.target.value)}
+                      fullWidth
+                    />
                   </Stack>
-                  {hidePhotos ? (
-                    <Box
-                      sx={{
-                        borderRadius: 4,
-                        p: 3,
-                        bgcolor: 'grey.100',
-                        textAlign: 'center',
-                      }}
+                </CardContent>
+              </Card>
+            </Stack>
+
+            <Box sx={{ gridColumn: { md: '1 / -1' } }}>
+              <Card sx={{ borderRadius: 4 }}>
+                <CardContent>
+                  <Stack spacing={2}>
+                    <Stack
+                      direction="row"
+                      alignItems="center"
+                      justifyContent="space-between"
                     >
-                      <InsertPhotoOutlinedIcon color="disabled" />
-                      <Typography variant="body2" color="text.secondary">
-                        Фото скрыты паник-режимом
+                      <Typography variant="subtitle1" fontWeight={700}>
+                        Фото
                       </Typography>
-                    </Box>
-                  ) : profile && profile.photoIds.length > 0 ? (
-                    <Box
-                      sx={{
-                        display: 'grid',
-                        gridTemplateColumns: {
-                          xs: 'repeat(2, minmax(0, 1fr))',
-                          sm: 'repeat(3, minmax(0, 1fr))',
-                        },
-                        gap: 2,
-                      }}
-                    >
-                      {photoUrls.map((photo) => (
-                        <Box
-                          key={photo.id}
-                          sx={{
-                            position: 'relative',
-                            borderRadius: 4,
-                            overflow: 'hidden',
-                            boxShadow: '0px 8px 24px rgba(15, 23, 42, 0.12)',
-                          }}
-                        >
+                      <Button
+                        variant="contained"
+                        startIcon={<AddPhotoAlternateOutlinedIcon />}
+                        onClick={() => {
+                          if (!profile) {
+                            setSnackbarMessage('Сначала создайте анкету');
+                            return;
+                          }
+                          fileInputRef.current?.click();
+                        }}
+                        sx={{ borderRadius: 999, textTransform: 'none' }}
+                      >
+                        Добавить фото
+                      </Button>
+                    </Stack>
+                    {hidePhotos ? (
+                      <Box
+                        sx={{
+                          borderRadius: 4,
+                          p: 3,
+                          bgcolor: 'grey.100',
+                          textAlign: 'center',
+                        }}
+                      >
+                        <InsertPhotoOutlinedIcon color="disabled" />
+                        <Typography variant="body2" color="text.secondary">
+                          Фото скрыты паник-режимом
+                        </Typography>
+                      </Box>
+                    ) : profile && profile.photoIds.length > 0 ? (
+                      <Box
+                        sx={{
+                          display: 'grid',
+                          gridTemplateColumns: {
+                            xs: 'repeat(2, minmax(0, 1fr))',
+                            sm: 'repeat(3, minmax(0, 1fr))',
+                          },
+                          gap: 2,
+                        }}
+                      >
+                        {photoUrls.map((photo) => (
                           <Box
-                            component="img"
-                            src={photo.url}
-                            alt={name || 'Фото'}
+                            key={photo.id}
                             sx={{
-                              width: '100%',
-                              height: 160,
-                              objectFit: 'cover',
-                              display: 'block',
-                            }}
-                          />
-                          <Stack
-                            direction="row"
-                            spacing={0.5}
-                            sx={{
-                              position: 'absolute',
-                              top: 8,
-                              right: 8,
+                              position: 'relative',
+                              borderRadius: 4,
+                              overflow: 'hidden',
+                              boxShadow: '0px 8px 24px rgba(15, 23, 42, 0.12)',
                             }}
                           >
-                            <IconButton
-                              size="small"
-                              sx={{ bgcolor: 'rgba(255,255,255,0.9)' }}
-                              aria-label="Сделать главным"
-                              onClick={() => handleMakeMainPhoto(photo.id)}
-                            >
-                              <StarRoundedIcon fontSize="small" />
-                            </IconButton>
-                            <IconButton
-                              size="small"
-                              sx={{ bgcolor: 'rgba(255,255,255,0.9)' }}
-                              aria-label="Удалить фото"
-                              onClick={async () => {
-                                if (!profile) {
-                                  return;
-                                }
-                                try {
-                                  await removePhoto(profile.id, photo.id);
-                                  await loadProfile();
-                                } catch (error) {
-                                  console.error(error);
-                                  setSnackbarMessage('Не удалось удалить фото');
-                                }
+                            <Box
+                              component="img"
+                              src={photo.url}
+                              alt={name || 'Фото'}
+                              sx={{
+                                width: '100%',
+                                height: 160,
+                                objectFit: 'cover',
+                                display: 'block',
+                              }}
+                            />
+                            <Stack
+                              direction="row"
+                              spacing={0.5}
+                              sx={{
+                                position: 'absolute',
+                                top: 8,
+                                right: 8,
                               }}
                             >
-                              <CloseRoundedIcon fontSize="small" />
-                            </IconButton>
-                          </Stack>
-                        </Box>
-                      ))}
-                    </Box>
-                  ) : (
-                    <Box
-                      sx={{
-                        borderRadius: 4,
-                        p: 3,
-                        bgcolor: 'grey.50',
-                        textAlign: 'center',
-                      }}
-                    >
-                      <Typography variant="body2" color="text.secondary">
-                        {profile
-                          ? 'Добавьте первые фото для анкеты.'
-                          : 'Добавить фото можно после сохранения анкеты.'}
-                      </Typography>
-                    </Box>
-                  )}
-                </Stack>
-              </CardContent>
-            </Card>
-          </Stack>
+                              <IconButton
+                                size="small"
+                                sx={{ bgcolor: 'rgba(255,255,255,0.9)' }}
+                                aria-label="Сделать главным"
+                                onClick={() => handleMakeMainPhoto(photo.id)}
+                              >
+                                <StarRoundedIcon fontSize="small" />
+                              </IconButton>
+                              <IconButton
+                                size="small"
+                                sx={{ bgcolor: 'rgba(255,255,255,0.9)' }}
+                                aria-label="Удалить фото"
+                                onClick={async () => {
+                                  if (!profile) {
+                                    return;
+                                  }
+                                  try {
+                                    await removePhoto(profile.id, photo.id);
+                                    await loadProfile();
+                                  } catch (error) {
+                                    console.error(error);
+                                    setSnackbarMessage(
+                                      'Не удалось удалить фото',
+                                    );
+                                  }
+                                }}
+                              >
+                                <CloseRoundedIcon fontSize="small" />
+                              </IconButton>
+                            </Stack>
+                          </Box>
+                        ))}
+                      </Box>
+                    ) : (
+                      <Box
+                        sx={{
+                          borderRadius: 4,
+                          p: 3,
+                          bgcolor: 'grey.50',
+                          textAlign: 'center',
+                        }}
+                      >
+                        <Typography variant="body2" color="text.secondary">
+                          {profile
+                            ? 'Добавьте первые фото для анкеты.'
+                            : 'Добавить фото можно после сохранения анкеты.'}
+                        </Typography>
+                      </Box>
+                    )}
+                  </Stack>
+                </CardContent>
+              </Card>
+            </Box>
+          </Box>
         ) : null}
       </Container>
 
