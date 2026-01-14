@@ -27,13 +27,13 @@ const PhotoFrame = ({
   const theme = useTheme();
   const shouldShowImage = Boolean(src) && !hide;
 
-  const borderRadius =
-    variant === 'hero' ? 28 : variant === 'tile' ? 20 : 16;
+  const radius = variant === 'hero' ? 28 : variant === 'tile' ? 20 : 16;
+  const radiusPx = `${radius}px`;
 
   const baseStyles = {
     position: 'relative',
     overflow: 'hidden',
-    borderRadius,
+    borderRadius: radiusPx,
     border: `1px solid ${alpha(theme.palette.common.black, 0.08)}`,
     bgcolor: theme.palette.action.hover,
     cursor: onClick ? 'pointer' : 'default',
