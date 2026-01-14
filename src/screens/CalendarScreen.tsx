@@ -373,7 +373,7 @@ const CalendarScreen = () => {
         <Typography
           variant="subtitle2"
           color={isCurrentMonth ? 'text.primary' : 'text.secondary'}
-          sx={{ lineHeight: 1.2, maxWidth: '100%' }}
+          sx={{ lineHeight: 1.2, maxWidth: '100%', pl: 0.5 }}
         >
           {date.getDate()}
         </Typography>
