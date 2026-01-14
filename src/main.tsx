@@ -2,7 +2,7 @@ import React from 'react';
 import ReactDOM from 'react-dom/client';
 import { BrowserRouter } from 'react-router-dom';
 import { CssBaseline, ThemeProvider } from '@mui/material';
-import AppShell from './app/AppShell';
+import AppRouter from './app/router';
 import theme from './app/theme';
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
@@ -10,7 +10,7 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
     <ThemeProvider theme={theme}>
       <CssBaseline />
       <BrowserRouter>
-        <AppShell />
+        <AppRouter />
       </BrowserRouter>
     </ThemeProvider>
   </React.StrictMode>
