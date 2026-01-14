@@ -507,8 +507,6 @@ const ProfileDetailScreen = () => {
                   overflow: 'hidden',
                   boxShadow: '0px 18px 40px rgba(15, 23, 42, 0.14)',
                   width: '100%',
-                  maxWidth: 820,
-                  mx: 'auto',
                 }}
               >
                 <PhotoFrame
@@ -633,22 +631,13 @@ const ProfileDetailScreen = () => {
                 </Stack>
               </Box>
 
-              <Box
-                sx={{
-                  width: '100%',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  alignItems: 'center',
-                  gap: 2,
-                }}
-              >
+              <Stack spacing={2}>
                 <Tabs
                   value={tab}
                   onChange={(_, value) => setTab(value)}
                   variant="fullWidth"
                   sx={{
                     width: '100%',
-                    maxWidth: 720,
                     '& .MuiTab-root': {
                       textTransform: 'none',
                       fontWeight: 600,
@@ -660,7 +649,7 @@ const ProfileDetailScreen = () => {
                   <Tab label="Галерея" />
                 </Tabs>
 
-                <Box sx={{ width: '100%', maxWidth: 720 }}>
+                <Box sx={{ width: '100%' }}>
                   <TabPanel value={tab} index={0}>
                     <Stack spacing={2}>
                       {events.length === 0 ? (
@@ -930,7 +919,7 @@ const ProfileDetailScreen = () => {
                     </Stack>
                   </TabPanel>
                 </Box>
-              </Box>
+              </Stack>
             </Stack>
           </Box>
         ) : null}
