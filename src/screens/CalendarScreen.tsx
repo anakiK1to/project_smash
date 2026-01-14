@@ -2,8 +2,6 @@ import {
   Box,
   Avatar,
   Button,
-  Card,
-  CardContent,
   Chip,
   Container,
   Dialog,
@@ -19,6 +17,7 @@ import {
   ListItemText,
   Menu,
   MenuItem,
+  Paper,
   Select,
   Stack,
   ToggleButton,
@@ -118,6 +117,11 @@ const formatShortDate = (date: Date): string =>
   new Intl.DateTimeFormat('ru-RU', { day: 'numeric', month: 'short' })
     .format(date)
     .replace('.', '');
+
+const isSameDay = (left: Date, right: Date): boolean =>
+  left.getFullYear() === right.getFullYear() &&
+  left.getMonth() === right.getMonth() &&
+  left.getDate() === right.getDate();
 
 const CalendarScreen = () => {
   const theme = useTheme();
@@ -329,6 +333,7 @@ const CalendarScreen = () => {
     const dayEvents = eventsByDay[dayKey] ?? [];
     const uniqueProfiles = new Set(dayEvents.map((item) => item.profileId));
     const isCurrentMonth = date.getMonth() === currentDate.getMonth();
+    const today = isSameDay(date, new Date());
     const typeCounts = dayEvents.reduce(
       (acc, event) => {
         acc[event.type] = (acc[event.type] ?? 0) + 1;
@@ -339,7 +344,7 @@ const CalendarScreen = () => {
     const topType = Object.entries(typeCounts).sort((a, b) => b[1] - a[1])[0];
 
     return (
-      <Box
+      <Paper
         key={dayKey}
         onClick={() => {
           setCurrentDate(date);
@@ -357,43 +362,56 @@ const CalendarScreen = () => {
           }
         }}
         sx={{
-          borderRadius: 2,
-          border: '1px solid',
-          borderColor: 'divider',
+          borderRadius: '16px',
+          borderColor: today ? 'primary.main' : 'divider',
           p: 1,
-          minHeight: { xs: 76, sm: 92, md: 110 },
+          height: { xs: 84, sm: 96, md: 112 },
           overflow: 'hidden',
           cursor: 'pointer',
-          bgcolor: isCurrentMonth ? 'background.paper' : 'action.hover',
+          bgcolor: isCurrentMonth
+            ? today
+              ? 'action.selected'
+              : 'background.paper'
+            : 'action.hover',
           display: 'flex',
           flexDirection: 'column',
-          gap: 0.5,
+          gap: 0.75,
+          transition: 'background-color 0.2s ease',
+          '&:hover': {
+            bgcolor: 'action.hover',
+          },
         }}
+        variant="outlined"
       >
         <Typography
           variant="subtitle2"
           color={isCurrentMonth ? 'text.primary' : 'text.secondary'}
-          sx={{ lineHeight: 1.2, maxWidth: '100%', pl: 0.5 }}
+          sx={{
+            lineHeight: 1.2,
+            maxWidth: '100%',
+            pl: 0.5,
+            opacity: isCurrentMonth ? 1 : 0.55,
+          }}
         >
           {date.getDate()}
         </Typography>
         {dayEvents.length > 0 ? (
-          <Stack direction="row" spacing={0.5} flexWrap="wrap" useFlexGap>
+          <Stack spacing={0.5} sx={{ flex: 1, overflow: 'hidden' }}>
             <Chip
               size="small"
               label={`${dayEvents.length} событий`}
-              sx={{ bgcolor: 'action.selected' }}
+              sx={{ bgcolor: 'action.selected', height: 22 }}
             />
             <Chip
               size="small"
               label={`${uniqueProfiles.size} людей`}
-              sx={{ bgcolor: 'action.selected' }}
+              sx={{ bgcolor: 'action.selected', height: 22 }}
             />
             {topType ? (
               <Chip
                 size="small"
                 label={`${eventTypeLabels[topType[0] as TimelineEventType]}: ${topType[1]}`}
-                sx={{ bgcolor: 'action.selected' }}
+                sx={{ bgcolor: 'action.selected', height: 22 }}
               />
             ) : null}
           </Stack>
@@ -402,37 +420,47 @@ const CalendarScreen = () => {
             Нет событий
           </Typography>
         )}
-      </Box>
+      </Paper>
     );
   };
 
   const renderWeekView = () => (
-    <Box
-      sx={{
-        display: 'grid',
-        gridTemplateColumns: {
-          xs: '1fr',
-          sm: 'repeat(2, 1fr)',
-          md: 'repeat(7, 1fr)',
-        },
-        gap: 1.5,
-      }}
-    >
-      {weekDates.map((date) => {
-        const key = getDayKey(date);
-        const dayEvents = (eventsByDay[key] ?? []).slice().sort((a, b) =>
-          a.at.localeCompare(b.at),
-        );
-        return (
-          <Card key={key} variant="outlined" sx={{ borderRadius: 3 }}>
-            <CardContent sx={{ p: 1.5 }}>
+    <Box sx={{ overflowX: { xs: 'auto', md: 'visible' } }}>
+      <Box
+        sx={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(7, minmax(0, 1fr))',
+          gap: 1.5,
+          minWidth: { xs: 720, md: 'auto' },
+        }}
+      >
+        {weekDates.map((date) => {
+          const key = getDayKey(date);
+          const dayEvents = (eventsByDay[key] ?? []).slice().sort((a, b) =>
+            a.at.localeCompare(b.at),
+          );
+          const isToday = isSameDay(date, new Date());
+          return (
+            <Paper
+              key={key}
+              variant="outlined"
+              sx={{
+                borderRadius: '16px',
+                borderColor: isToday ? 'primary.main' : 'divider',
+                p: 1.5,
+                display: 'flex',
+                flexDirection: 'column',
+                gap: 1.25,
+                bgcolor: isToday ? 'action.selected' : 'background.paper',
+              }}
+            >
               <Button
                 onClick={() => {
                   setCurrentDate(date);
                   setLastNonDayView('week');
                   setView('day');
                 }}
-                sx={{ textTransform: 'none', px: 0, minWidth: 'unset' }}
+                sx={{ textTransform: 'none', px: 0, minWidth: 'unset', alignSelf: 'flex-start' }}
               >
                 <Stack alignItems="flex-start">
                   <Typography variant="subtitle2">
@@ -443,14 +471,14 @@ const CalendarScreen = () => {
                   </Typography>
                 </Stack>
               </Button>
-              <Stack spacing={1} sx={{ mt: 1 }}>
+              <Stack spacing={1}>
                 {dayEvents.length === 0 ? (
                   <Typography variant="caption" color="text.secondary">
                     Нет событий
                   </Typography>
                 ) : (
                   dayEvents.map((event) => (
-                    <Box
+                    <Paper
                       key={event.id}
                       onClick={() => openEditDialog(event)}
                       role="button"
@@ -460,10 +488,12 @@ const CalendarScreen = () => {
                           openEditDialog(event);
                         }
                       }}
+                      variant="outlined"
                       sx={{
                         p: 1,
-                        borderRadius: 2,
-                        bgcolor: 'action.hover',
+                        borderRadius: '12px',
+                        borderColor: 'divider',
+                        bgcolor: 'background.default',
                         cursor: 'pointer',
                       }}
                     >
@@ -482,14 +512,14 @@ const CalendarScreen = () => {
                           {event.text ? ` · ${event.text}` : ''}
                         </Typography>
                       </Stack>
-                    </Box>
+                    </Paper>
                   ))
                 )}
               </Stack>
-            </CardContent>
-          </Card>
-        );
-      })}
+            </Paper>
+          );
+        })}
+      </Box>
     </Box>
   );
 
@@ -509,13 +539,24 @@ const CalendarScreen = () => {
 
     if (profileIds.length === 0) {
       return (
-        <Card variant="outlined" sx={{ borderRadius: 3 }}>
-          <CardContent>
-            <Typography color="text.secondary">
-              Пока нет событий на этот день.
+        <Paper
+          variant="outlined"
+          sx={{
+            borderRadius: '16px',
+            p: 3,
+            textAlign: 'center',
+            bgcolor: 'background.paper',
+          }}
+        >
+          <Stack spacing={1} alignItems="center">
+            <Typography variant="subtitle1" fontWeight={600}>
+              Событий на этот день нет
             </Typography>
-          </CardContent>
-        </Card>
+            <Typography color="text.secondary" variant="body2">
+              Добавьте встречу или сообщение, чтобы день стал насыщеннее.
+            </Typography>
+          </Stack>
+        </Paper>
       );
     }
 
@@ -528,83 +569,93 @@ const CalendarScreen = () => {
           );
           const tone = profile ? statusTones[profile.status] : undefined;
           return (
-            <Card key={profileId} variant="outlined" sx={{ borderRadius: 3 }}>
-              <CardContent>
-                <Stack spacing={1.5}>
-                  <Stack direction="row" spacing={1} alignItems="center">
-                    <Typography variant="subtitle1" fontWeight={600}>
-                      {profile?.name ?? 'Профиль'}
-                    </Typography>
-                    {profile ? (
-                      <Chip
-                        size="small"
-                        label={profile.status}
-                        sx={{ bgcolor: tone?.bg, color: tone?.fg }}
-                      />
-                    ) : null}
-                  </Stack>
-                  <List sx={{ p: 0 }}>
-                    {eventsList.map((event) => (
-                      <ListItem
-                        key={event.id}
-                        alignItems="flex-start"
-                        secondaryAction={
-                          <IconButton
-                            edge="end"
-                            aria-label="Действия"
-                            onClick={(clickEvent) => {
-                              clickEvent.stopPropagation();
-                              handleMenuOpen(clickEvent, event);
-                            }}
-                          >
-                            <MoreVertIcon />
-                          </IconButton>
-                        }
-                        sx={{ px: 0 }}
-                        onClick={() => openEditDialog(event)}
-                      >
-                        <ListItemAvatar>
-                          <Avatar
-                            sx={{
-                              bgcolor: eventTypeTones[event.type].bg,
-                              color: eventTypeTones[event.type].fg,
-                              width: 36,
-                              height: 36,
-                            }}
-                          >
-                            {eventTypeIcons[event.type]}
-                          </Avatar>
-                        </ListItemAvatar>
-                        <ListItemText
-                          primary={
-                            <Stack direction="row" spacing={1} alignItems="center">
-                              <Typography fontWeight={600}>
-                                {eventTypeLabels[event.type]}
-                              </Typography>
-                              <Typography variant="body2" color="text.secondary">
-                                {formatTime(event.at)}
-                              </Typography>
-                            </Stack>
-                          }
-                          secondary={
-                            <Stack spacing={0.5}>
-                              {event.mood ? (
-                                <Typography variant="body2">{event.mood}</Typography>
-                              ) : null}
-                              {event.text ? (
-                                <Typography variant="body2" color="text.secondary">
-                                  {event.text}
-                                </Typography>
-                              ) : null}
-                            </Stack>
-                          }
-                        />
-                      </ListItem>
-                    ))}
-                  </List>
+            <Paper
+              key={profileId}
+              variant="outlined"
+              sx={{ borderRadius: '16px', p: { xs: 2, md: 2.5 } }}
+            >
+              <Stack spacing={1.5}>
+                <Stack direction="row" spacing={1} alignItems="center" flexWrap="wrap">
+                  <Typography variant="subtitle1" fontWeight={600}>
+                    {profile?.name ?? 'Профиль'}
+                  </Typography>
+                  {profile ? (
+                    <Chip
+                      size="small"
+                      label={profile.status}
+                      sx={{ bgcolor: tone?.bg, color: tone?.fg }}
+                    />
+                  ) : null}
                 </Stack>
-              </CardContent>
-            </Card>
+                <List sx={{ p: 0 }}>
+                  {eventsList.map((event) => (
+                    <ListItem
+                      key={event.id}
+                      alignItems="flex-start"
+                      secondaryAction={
+                        <IconButton
+                          edge="end"
+                          aria-label="Действия"
+                          onClick={(clickEvent) => {
+                            clickEvent.stopPropagation();
+                            handleMenuOpen(clickEvent, event);
+                          }}
+                        >
+                          <MoreVertIcon />
+                        </IconButton>
+                      }
+                      sx={{
+                        px: 0,
+                        py: 1,
+                        borderBottom: '1px solid',
+                        borderColor: 'divider',
+                        '&:last-of-type': {
+                          borderBottom: 'none',
+                        },
+                      }}
+                      onClick={() => openEditDialog(event)}
+                    >
+                      <ListItemAvatar>
+                        <Avatar
+                          sx={{
+                            bgcolor: eventTypeTones[event.type].bg,
+                            color: eventTypeTones[event.type].fg,
+                            width: 36,
+                            height: 36,
+                          }}
+                        >
+                          {eventTypeIcons[event.type]}
+                        </Avatar>
+                      </ListItemAvatar>
+                      <ListItemText
+                        primary={
+                          <Stack direction="row" spacing={1} alignItems="center">
+                            <Typography fontWeight={600}>
+                              {eventTypeLabels[event.type]}
+                            </Typography>
+                            <Typography variant="body2" color="text.secondary">
+                              {formatTime(event.at)}
+                            </Typography>
+                          </Stack>
+                        }
+                        secondary={
+                          <Stack spacing={0.5}>
+                            {event.mood ? (
+                              <Typography variant="body2">{event.mood}</Typography>
+                            ) : null}
+                            {event.text ? (
+                              <Typography variant="body2" color="text.secondary">
+                                {event.text}
+                              </Typography>
+                            ) : null}
+                          </Stack>
+                        }
+                      />
+                    </ListItem>
+                  ))}
+                </List>
+              </Stack>
+            </Paper>
           );
         })}
       </Stack>
@@ -659,6 +710,18 @@ const CalendarScreen = () => {
                 {title}
               </Typography>
             </Stack>
+            <Stack direction="row" spacing={1} alignItems="center" flexWrap="wrap">
+              {view === 'day' ? (
+                <Button
+                  variant="contained"
+                  startIcon={<AddIcon />}
+                  sx={{ textTransform: 'none' }}
+                  onClick={openAddDialog}
+                  disabled={profiles.length === 0}
+                >
+                  Добавить событие
+                </Button>
+              ) : null}
               <ToggleButtonGroup
                 value={view}
                 exclusive
@@ -670,14 +733,15 @@ const CalendarScreen = () => {
                     setView(value);
                   }
                 }}
-              color="primary"
-              size={isDesktop ? 'medium' : 'small'}
-              sx={{ alignSelf: { xs: 'flex-start', md: 'center' } }}
-            >
-              <ToggleButton value="month">Месяц</ToggleButton>
-              <ToggleButton value="week">Неделя</ToggleButton>
-              <ToggleButton value="day">День</ToggleButton>
-            </ToggleButtonGroup>
+                color="primary"
+                size={isDesktop ? 'medium' : 'small'}
+                sx={{ alignSelf: { xs: 'flex-start', md: 'center' } }}
+              >
+                <ToggleButton value="month">Месяц</ToggleButton>
+                <ToggleButton value="week">Неделя</ToggleButton>
+                <ToggleButton value="day">День</ToggleButton>
+              </ToggleButtonGroup>
+            </Stack>
           </Stack>
         </Stack>
 
@@ -690,7 +754,7 @@ const CalendarScreen = () => {
             <Box
               sx={{
                 display: 'grid',
-                gridTemplateColumns: 'repeat(7, 1fr)',
+                gridTemplateColumns: 'repeat(7, minmax(0, 1fr))',
                 gap: 1,
               }}
             >
@@ -709,7 +773,7 @@ const CalendarScreen = () => {
             <Box
               sx={{
                 display: 'grid',
-                gridTemplateColumns: 'repeat(7, 1fr)',
+                gridTemplateColumns: 'repeat(7, minmax(0, 1fr))',
                 gap: 1,
               }}
             >
@@ -721,25 +785,16 @@ const CalendarScreen = () => {
         {view === 'week' ? renderWeekView() : null}
 
         {view === 'day' ? (
-          <Stack spacing={2}>
-            <Stack direction="row" spacing={1} alignItems="center">
-              <Button
-                variant="contained"
-                startIcon={<AddIcon />}
-                sx={{ textTransform: 'none' }}
-                onClick={openAddDialog}
-                disabled={profiles.length === 0}
-              >
-                Добавить событие
-              </Button>
+          <Box sx={{ maxWidth: 'md', width: '100%', mx: 'auto' }}>
+            <Stack spacing={2}>
               {profiles.length === 0 ? (
                 <Typography variant="body2" color="text.secondary">
                   Сначала добавьте профиль, чтобы создать событие.
                 </Typography>
               ) : null}
+              {renderDayView()}
             </Stack>
-            {renderDayView()}
-          </Stack>
+          </Box>
         ) : null}
       </Stack>
 
