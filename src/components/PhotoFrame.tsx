@@ -28,7 +28,7 @@ const PhotoFrame = ({
   const shouldShowImage = Boolean(src) && !hide;
 
   const borderRadius =
-    variant === 'hero' ? 20 : variant === 'tile' ? 20 : 18;
+    variant === 'hero' ? 16 : variant === 'tile' ? 16 : 18;
 
   const baseStyles = {
     position: 'relative',
@@ -43,8 +43,11 @@ const PhotoFrame = ({
     variant === 'hero'
       ? {
           width: '100%',
+          maxWidth: { xs: 280, sm: 340, md: 420 },
           aspectRatio: '1 / 1',
-          minHeight: { xs: 220, md: 300 },
+          minHeight: { xs: 200, sm: 240, md: 280 },
+          maxHeight: { xs: 280, sm: 340, md: 420 },
+          mx: 'auto',
         }
       : variant === 'tile'
         ? {
