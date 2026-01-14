@@ -10,27 +10,27 @@ import {
 } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
 import { useNavigate } from 'react-router-dom';
-
-const mockProfiles = [
-  {
-    id: '1',
-    name: 'Аня Л.',
-    status: 'Ищу серьёзные отношения',
-  },
-  {
-    id: '2',
-    name: 'Дима К.',
-    status: 'Открыт для общения',
-  },
-  {
-    id: '3',
-    name: 'Марина П.',
-    status: 'Свайп без спешки',
-  },
-];
+import { useEffect, useState } from 'react';
+import type { Profile } from '../domain/types';
+import { listProfiles } from '../storage';
 
 const ProfilesListScreen = () => {
   const navigate = useNavigate();
+  const [profiles, setProfiles] = useState<Profile[]>([]);
+
+  useEffect(() => {
+    let active = true;
+    const loadProfiles = async () => {
+      const data = await listProfiles();
+      if (active) {
+        setProfiles(data);
+      }
+    };
+    loadProfiles();
+    return () => {
+      active = false;
+    };
+  }, []);
 
   return (
     <Box sx={{ pb: 10 }}>
@@ -42,7 +42,7 @@ const ProfilesListScreen = () => {
       </Stack>
 
       <Stack spacing={2}>
-        {mockProfiles.map((profile) => (
+        {profiles.map((profile) => (
           <Card key={profile.id} elevation={2}>
             <CardActionArea onClick={() => navigate(`/p/${profile.id}`)}>
               <CardContent>
