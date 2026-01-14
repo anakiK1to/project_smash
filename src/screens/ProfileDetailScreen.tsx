@@ -22,6 +22,7 @@ import {
   ListItemText,
   Menu,
   MenuItem,
+  MenuList,
   Rating,
   Select,
   Skeleton,
@@ -43,7 +44,6 @@ import StarIcon from '@mui/icons-material/Star';
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
 import AddIcon from '@mui/icons-material/Add';
 import EditOutlinedIcon from '@mui/icons-material/EditOutlined';
-import CloseIcon from '@mui/icons-material/Close';
 import PhotoLibraryIcon from '@mui/icons-material/PhotoLibrary';
 import {
   useCallback,
@@ -51,6 +51,7 @@ import {
   useMemo,
   useRef,
   useState,
+  type MouseEvent,
   type ReactNode,
 } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
@@ -81,6 +82,7 @@ import {
 } from '../utils/date';
 import { usePrivacySettings } from '../app/usePrivacySettings';
 import PhotoFrame from '../components/PhotoFrame';
+import PhotoViewerDialog from '../components/PhotoViewerDialog';
 
 const statusTones: Record<ProfileStatus, { bg: string; fg: string }> = {
   Новая: { bg: '#E3F2FD', fg: '#0D47A1' },
@@ -161,8 +163,15 @@ const ProfileDetailScreen = () => {
   const [eventText, setEventText] = useState('');
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const skipNotesSaveRef = useRef(true);
+  const [viewerOpen, setViewerOpen] = useState(false);
+  const [viewerIndex, setViewerIndex] = useState(0);
+  const [photoMenuAnchor, setPhotoMenuAnchor] = useState<null | HTMLElement>(
+    null,
+  );
+  const [activePhotoId, setActivePhotoId] = useState<string | null>(null);
 
   const openMenu = Boolean(menuAnchor);
+  const openPhotoMenu = Boolean(photoMenuAnchor);
 
   const loadProfile = useCallback(async () => {
     if (!id) {
@@ -242,6 +251,12 @@ const ProfileDetailScreen = () => {
       urls.forEach((url) => URL.revokeObjectURL(url));
     };
   }, [profile?.photoIds, hidePhotos]);
+
+  useEffect(() => {
+    if (viewerIndex >= photoUrls.length && photoUrls.length > 0) {
+      setViewerIndex(photoUrls.length - 1);
+    }
+  }, [photoUrls.length, viewerIndex]);
 
   useEffect(() => {
     const profileId = profile?.id;
@@ -417,7 +432,46 @@ const ProfileDetailScreen = () => {
     }
   };
 
+  const handleDeletePhoto = async (photoId: string) => {
+    if (!profile) {
+      return;
+    }
+    try {
+      await removePhoto(profile.id, photoId);
+      await loadProfile();
+    } catch (error) {
+      console.error(error);
+      setSnackbarMessage('Не удалось удалить фото');
+    }
+  };
+
+  const handleOpenViewer = (index: number) => {
+    if (photoUrls.length === 0) {
+      return;
+    }
+    setViewerIndex(index);
+    setViewerOpen(true);
+  };
+
+  const handlePhotoMenuOpen = (
+    event: MouseEvent<HTMLButtonElement>,
+    photoId: string,
+  ) => {
+    event.stopPropagation();
+    setPhotoMenuAnchor(event.currentTarget);
+    setActivePhotoId(photoId);
+  };
+
+  const handlePhotoMenuClose = () => {
+    setPhotoMenuAnchor(null);
+    setActivePhotoId(null);
+  };
+
   const heroPhotoUrl = photoUrls[0]?.url;
+  const viewerPhotos = photoUrls.map((photo) => ({
+    id: photo.id,
+    src: photo.url,
+  }));
   const galleryItems = hidePhotos
     ? profile?.photoIds.map((photoId) => ({ id: photoId, url: null })) ?? []
     : photoUrls;
@@ -852,66 +906,66 @@ const ProfileDetailScreen = () => {
                         </Card>
                       ) : (
                         <Grid container spacing={2} columns={{ xs: 2, sm: 3, md: 4 }}>
-                          {galleryItems.map((photo) => (
+                          {galleryItems.map((photo, index) => (
                             <Grid item key={photo.id} xs={1} sm={1} md={1}>
-                              <PhotoFrame
-                                variant="tile"
-                                src={photo.url ?? undefined}
-                                alt={profile.name}
-                                hide={hidePhotos}
-                                overlay={
-                                  <>
-                                    <Stack
-                                      direction="row"
-                                      spacing={0.5}
-                                      sx={{
-                                        position: 'absolute',
-                                        top: 8,
-                                        right: 8,
-                                      }}
-                                    >
-                                      <IconButton
-                                        size="small"
-                                        sx={{ bgcolor: 'rgba(255,255,255,0.9)' }}
-                                        aria-label="Сделать главным"
-                                        onClick={() => handleMakeMainPhoto(photo.id)}
-                                      >
-                                        <StarIcon fontSize="small" />
-                                      </IconButton>
-                                      <IconButton
-                                        size="small"
-                                        sx={{ bgcolor: 'rgba(255,255,255,0.9)' }}
-                                        aria-label="Удалить фото"
-                                        onClick={async () => {
-                                          try {
-                                            await removePhoto(profile.id, photo.id);
-                                            await loadProfile();
-                                          } catch (error) {
-                                            console.error(error);
-                                            setSnackbarMessage(
-                                              'Не удалось удалить фото',
-                                            );
-                                          }
-                                        }}
-                                      >
-                                        <CloseIcon fontSize="small" />
-                                      </IconButton>
-                                    </Stack>
-                                    {profile.photoIds[0] === photo.id ? (
-                                      <Chip
-                                        label="Главное"
-                                        size="small"
+                              <Box
+                                role="button"
+                                tabIndex={0}
+                                aria-label="Открыть фото"
+                                onClick={() => handleOpenViewer(index)}
+                                onKeyDown={(event) => {
+                                  if (event.key === 'Enter' || event.key === ' ') {
+                                    event.preventDefault();
+                                    handleOpenViewer(index);
+                                  }
+                                }}
+                                sx={{ cursor: 'pointer' }}
+                              >
+                                <PhotoFrame
+                                  variant="tile"
+                                  src={photo.url ?? undefined}
+                                  alt={profile.name}
+                                  hide={hidePhotos}
+                                  overlay={
+                                    <>
+                                      <Stack
+                                        direction="row"
+                                        spacing={0.5}
                                         sx={{
                                           position: 'absolute',
-                                          left: 8,
-                                          bottom: 8,
-                                          bgcolor: 'rgba(255,255,255,0.9)',
+                                          top: 8,
+                                          right: 8,
                                         }}
-                                      />
-                                    ) : null}
-                                  </>
-                                }
-                              />
+                                      >
+                                        <IconButton
+                                          size="small"
+                                          sx={{
+                                            bgcolor: 'rgba(255,255,255,0.9)',
+                                          }}
+                                          aria-label="Действия с фото"
+                                          onClick={(event) =>
+                                            handlePhotoMenuOpen(event, photo.id)
+                                          }
+                                        >
+                                          <MoreVertIcon fontSize="small" />
+                                        </IconButton>
+                                      </Stack>
+                                      {profile.photoIds[0] === photo.id ? (
+                                        <Chip
+                                          label="Главное"
+                                          size="small"
+                                          sx={{
+                                            position: 'absolute',
+                                            left: 8,
+                                            bottom: 8,
+                                            bgcolor: 'rgba(255,255,255,0.9)',
+                                          }}
+                                        />
+                                      ) : null}
+                                    </>
+                                  }
+                                />
+                              </Box>
                             </Grid>
                           ))}
                         </Grid>
@@ -979,6 +1033,45 @@ const ProfileDetailScreen = () => {
           </Button>
         </DialogActions>
       </Dialog>
+
+      <PhotoViewerDialog
+        open={viewerOpen}
+        photos={viewerPhotos}
+        index={viewerIndex}
+        onClose={() => setViewerOpen(false)}
+        onChangeIndex={setViewerIndex}
+      />
+
+      <Menu
+        anchorEl={photoMenuAnchor}
+        open={openPhotoMenu}
+        onClose={handlePhotoMenuClose}
+      >
+        <MenuList autoFocusItem={openPhotoMenu}>
+          <MenuItem
+            onClick={() => {
+              if (!activePhotoId) {
+                return;
+              }
+              handlePhotoMenuClose();
+              handleMakeMainPhoto(activePhotoId);
+            }}
+          >
+            Сделать главным фото
+          </MenuItem>
+          <MenuItem
+            onClick={() => {
+              if (!activePhotoId) {
+                return;
+              }
+              handlePhotoMenuClose();
+              handleDeletePhoto(activePhotoId);
+            }}
+          >
+            Удалить фото
+          </MenuItem>
+        </MenuList>
+      </Menu>
 
       <Dialog
         open={confirmDeleteOpen}
