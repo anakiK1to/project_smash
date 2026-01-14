@@ -33,12 +33,21 @@ type ProfileCardProps = {
   profile: Profile;
   onOpen: (id: string) => void;
   onEventAdded?: () => void;
+  dense?: boolean;
+  layout?: 'list' | 'grid';
 };
 
-const ProfileCard = ({ profile, onOpen, onEventAdded }: ProfileCardProps) => {
+const ProfileCard = ({
+  profile,
+  onOpen,
+  onEventAdded,
+  dense = false,
+  layout = 'list',
+}: ProfileCardProps) => {
   const [photoUrl, setPhotoUrl] = useState<string | undefined>();
   const [snackbarMessage, setSnackbarMessage] = useState<string | null>(null);
   const { hidePhotos, hideScores } = usePrivacySettings();
+  const isGrid = layout === 'grid';
 
   useEffect(() => {
     let active = true;
@@ -127,13 +136,17 @@ const ProfileCard = ({ profile, onOpen, onEventAdded }: ProfileCardProps) => {
     >
       <CardActionArea
         onClick={() => onOpen(profile.id)}
-        sx={{ p: 2 }}
+        sx={{ p: { xs: 2, md: dense ? 1.5 : 2 } }}
       >
-        <Stack direction="row" spacing={2} alignItems="center">
+        <Stack
+          direction={isGrid ? 'column' : 'row'}
+          spacing={2}
+          alignItems={isGrid ? 'stretch' : 'center'}
+        >
           <Box
             sx={{
-              width: 96,
-              height: 96,
+              width: isGrid ? '100%' : { xs: 96, md: dense ? 84 : 96 },
+              height: isGrid ? { xs: 160, md: 140 } : { xs: 96, md: dense ? 84 : 96 },
               borderRadius: 2,
               overflow: 'hidden',
               flexShrink: 0,
