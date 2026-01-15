@@ -14,7 +14,8 @@
     "electron:package": "npm run build && npm run build:electron && electron-builder",
     "preview": "vite preview",
     "lint": "eslint .",
-    "format": "prettier --write ."
+    "format": "prettier --write .",
+    "dist:win": "npm run build && npm run build:electron && electron-builder --win"
   },
   "dependencies": {
     "@emotion/react": "^11.11.4",
