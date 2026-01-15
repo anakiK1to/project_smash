@@ -61,7 +61,7 @@
     "win": {
       "target": "nsis"
     },
-    "publish": "never",
+    "publish": null,
     "linux": {
       "target": [
         "AppImage",
