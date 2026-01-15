@@ -53,15 +53,20 @@
     "directories": {
       "output": "release"
     },
-    "files": ["dist/**", "electron-dist/**", "package.json"],
+    "files": [
+      "dist/**",
+      "electron-dist/**",
+      "package.json"
+    ],
     "win": {
       "target": "nsis"
     },
-    "build": {
-      "publish": "never"
-    },
+    "publish": "never",
     "linux": {
-      "target": ["AppImage", "deb"]
+      "target": [
+        "AppImage",
+        "deb"
+      ]
     }
   }
 }
