@@ -2,6 +2,7 @@
   "name": "dating-cards",
   "private": true,
   "version": "0.0.0",
+  "author": "Dating Cards Team <dev@example.com>",
   "type": "module",
   "main": "electron-dist/main.js",
   "scripts": {
